@@ -1,0 +1,28 @@
+# Dependencies
+node_modules/
+package-lock.json
+yarn.lock
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+
+# OS
+.DS_Store
+.vscode/
+.idea/
+
+# Prisma
+prisma/*.db
+prisma/*.db-journal
+
+# Uploads
+uploads/
+dist/
+build/

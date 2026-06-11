@@ -1,0 +1,300 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Company {
+  id              String    @id @default(uuid())
+  name            String    @unique
+  email           String    @unique
+  plan            String    @default("FREE")
+  
+  users           User[]
+  chats           Chat[]
+  roles           Role[]
+  tasks           Task[]
+  events          Event[]
+  subscriptions   Subscription[]
+  activityLogs    ActivityLog[]
+  
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@map("companies")
+}
+
+model User {
+  id              String    @id @default(uuid())
+  
+  // Basic info
+  name            String
+  email           String    @unique
+  phone           String?
+  department      String?
+  jobTitle        String?
+  profilePicture  String?
+  
+  // Auth
+  passwordHash    String?
+  googleId        String?   @unique
+  isEmailVerified Boolean   @default(false)
+  
+  // Role & Status
+  role            String    @default("user")
+  status          String    @default("active")
+  isActive        Boolean   @default(true)
+  
+  // Relations
+  company         Company   @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  companyId       String
+  
+  manager         User?     @relation("ManagerToEmployees", fields: [managerId], references: [id])
+  managerId       String?
+  employees       User[]    @relation("ManagerToEmployees")
+  assignedTasks   Task[]    @relation("AssignedTasks")
+  createdTasks    Task[]    @relation("CreatedTasks")
+  
+  chatMembers     ChatMember[]
+  messages        Message[]
+  userRoles       UserRole[]
+  events          EventAttendee[]
+  
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@index([companyId])
+  @@index([managerId])
+  @@map("users")
+}
+
+model Chat {
+  id              String    @id @default(uuid())
+  name            String?
+  isGroup         Boolean   @default(false)
+  isArchived      Boolean   @default(false)
+  
+  createdBy       String
+  companyId       String
+  
+  company         Company   @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  chatMembers     ChatMember[]
+  messages        Message[]
+  
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@index([companyId])
+  @@map("chats")
+}
+
+model ChatMember {
+  id              String    @id @default(uuid())
+  chatId          String
+  userId          String
+  
+  chat            Chat      @relation(fields: [chatId], references: [id], onDelete: Cascade)
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  createdAt       DateTime  @default(now())
+
+  @@unique([chatId, userId])
+  @@index([chatId])
+  @@index([userId])
+  @@map("chat_members")
+}
+
+model Message {
+  id              String    @id @default(uuid())
+  content         String
+  
+  chatId          String
+  userId          String
+  
+  chat            Chat      @relation(fields: [chatId], references: [id], onDelete: Cascade)
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  reactions       Reaction[]
+  readReceipts    ReadReceipt[]
+  
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@index([chatId])
+  @@index([userId])
+  @@map("messages")
+}
+
+model Reaction {
+  id              String    @id @default(uuid())
+  emoji           String
+  
+  messageId       String
+  userId          String
+  
+  message         Message   @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  
+  createdAt       DateTime  @default(now())
+
+  @@unique([messageId, userId, emoji])
+  @@index([messageId])
+  @@index([userId])
+  @@map("reactions")
+}
+
+model ReadReceipt {
+  id              String    @id @default(uuid())
+  messageId       String
+  userId          String
+  
+  message         Message   @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  
+  createdAt       DateTime  @default(now())
+
+  @@unique([messageId, userId])
+  @@index([messageId])
+  @@index([userId])
+  @@map("read_receipts")
+}
+
+model Subscription {
+  id              String    @id @default(uuid())
+  companyId       String
+  planId          String
+  
+  status          String    @default("active") // active, cancelled, expired
+  startDate       DateTime  @default(now())
+  endDate         DateTime?
+  renewalDate     DateTime?
+  
+  company         Company   @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  plan            PricingPlan @relation(fields: [planId], references: [id])
+  
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@map("subscriptions")
+}
+
+model ActivityLog {
+  id              String    @id @default(uuid())
+  action          String
+  companyId       String
+  
+  company         Company   @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  
+  createdAt       DateTime  @default(now())
+
+  @@map("activity_logs")
+}
+
+model Role {
+  id          String   @id @default(uuid())
+  name        String
+  description String?
+  companyId   String
+  
+  company     Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  userRoles   UserRole[]
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([companyId])
+  @@map("roles")
+}
+
+model UserRole {
+  id        String   @id @default(uuid())
+  userId    String
+  roleId    String
+  
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role      Role     @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  
+  createdAt DateTime @default(now())
+
+  @@unique([userId, roleId])
+  @@map("user_roles")
+}
+
+model Task {
+  id          String   @id @default(uuid())
+  title       String
+  description String?
+  priority    String   @default("Medium")
+  status      String   @default("Pending")
+  dueDate     DateTime?
+  
+  companyId   String
+  assignedTo  String?
+  createdBy   String
+  
+  company     Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  assignee    User?    @relation("AssignedTasks", fields: [assignedTo], references: [id])
+  creator     User     @relation("CreatedTasks", fields: [createdBy], references: [id])
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([companyId])
+  @@map("tasks")
+}
+
+model Event {
+  id          String    @id @default(uuid())
+  title       String
+  description String?
+  startTime   DateTime
+  endTime     DateTime
+  location    String?
+  
+  createdBy   String
+  companyId   String
+  
+  company     Company   @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  attendees   EventAttendee[]
+  
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([companyId])
+  @@map("events")
+}
+
+model EventAttendee {
+  id        String   @id @default(uuid())
+  eventId   String
+  userId    String
+  
+  event     Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  createdAt DateTime @default(now())
+
+  @@unique([eventId, userId])
+  @@index([eventId])
+  @@index([userId])
+  @@map("event_attendees")
+}
+
+model PricingPlan {
+  id              String    @id @default(uuid())
+  name            String
+  description     String?
+  price           Float
+  billingCycle    String    @default("monthly") // monthly, yearly
+  features        String[]  @default([])
+  maxUsers        Int?
+  maxStorage      Int?      // GB
+  isActive        Boolean   @default(true)
+  
+  subscriptions   Subscription[]
+  
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@map("pricing_plans")
+}

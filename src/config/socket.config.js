@@ -1,0 +1,79 @@
+import { Server } from 'socket.io';
+import { logger } from '../utils/logger.js';
+let io;
+export const initializeSocket = (httpServer) => {
+    io = new Server(httpServer, {
+        cors: {
+            origin: process.env.FRONTEND_URL || 'http://localhost:5173',
+            methods: ['GET', 'POST'],
+        },
+    });
+    const onlineUsers = new Map();
+    io.on('connection', (socket) => {
+        logger.info(`User connected: ${socket.id}`);
+        socket.on('user-online', (userId) => {
+            onlineUsers.set(userId, socket.id);
+            io.emit('user-status', {
+                userId,
+                status: 'online',
+                onlineCount: onlineUsers.size,
+            });
+            logger.info(`User online: ${userId}`);
+        });
+        socket.on('join-chat', (chatId) => {
+            socket.join(`chat-${chatId}`);
+            logger.info(`User ${socket.id} joined chat: ${chatId}`);
+        });
+        socket.on('send-message', (data) => {
+            io.to(`chat-${data.chatId}`).emit('receive-message', {
+                id: data.id,
+                content: data.content,
+                chatId: data.chatId,
+                userId: data.userId,
+                userName: data.userName,
+                createdAt: new Date(),
+            });
+            logger.info(`Message sent in chat: ${data.chatId}`);
+        });
+        socket.on('typing', (data) => {
+            io.to(`chat-${data.chatId}`).emit('user-typing', {
+                chatId: data.chatId,
+                userId: data.userId,
+                userName: data.userName,
+            });
+        });
+        socket.on('stop-typing', (data) => {
+            io.to(`chat-${data.chatId}`).emit('user-stopped-typing', {
+                chatId: data.chatId,
+                userId: data.userId,
+            });
+        });
+        socket.on('add-reaction', (data) => {
+            io.to(`chat-${data.chatId}`).emit('reaction-added', {
+                messageId: data.messageId,
+                emoji: data.emoji,
+                userId: data.userId,
+            });
+        });
+        socket.on('disconnect', () => {
+            let offlineUserId;
+            for (const [userId, socketId] of onlineUsers.entries()) {
+                if (socketId === socket.id) {
+                    offlineUserId = userId;
+                    onlineUsers.delete(userId);
+                    break;
+                }
+            }
+            if (offlineUserId) {
+                io.emit('user-status', {
+                    userId: offlineUserId,
+                    status: 'offline',
+                    onlineCount: onlineUsers.size,
+                });
+            }
+            logger.info(`User disconnected: ${socket.id}`);
+        });
+    });
+    return io;
+};
+export const getIO = () => io;
