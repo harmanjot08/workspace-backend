@@ -1,16 +1,15 @@
 import { createClient } from 'redis';
+import { logger } from '../utils/logger.js';
 
-const client = redis.createClient({
-    url: process.env.REDIS_URL,
+const client = createClient({
+    url: process.env.REDIS_URL || 'redis://localhost:6379',
     socket: {
-        tls: true,
+        tls: process.env.REDIS_URL ? true : false,
         rejectUnauthorized: false,
     },
 });
 
-redisClient.on('error', (err) => console.log('Redis Client Error', err));
-redisClient.on('connect', () => console.log('✅ Redis Connected'));
+client.on('error', (err) => logger.error('Redis error:', err));
+client.on('connect', () => logger.info('✅ Redis Connected'));
 
-await redisClient.connect();
-
-export default redisClient;
+export default client;
