@@ -1,15 +1,17 @@
 import { createClient } from 'redis';
-import { logger } from '../utils/logger.js';
 
-const client = createClient({
+const redisClient = createClient({
     url: process.env.REDIS_URL || 'redis://localhost:6379',
     socket: {
-        tls: process.env.REDIS_URL ? true : false,
+        tls: process.env.REDIS_URL?.startsWith('rediss://'),
         rejectUnauthorized: false,
-    },
+        reconnectStrategy: (retries) => Math.min(retries * 50, 500),
+    }
 });
 
-client.on('error', (err) => logger.error('Redis error:', err));
-client.on('connect', () => logger.info('✅ Redis Connected'));
+redisClient.on('error', (err) => console.log('Redis Client Error', err));
+redisClient.on('connect', () => console.log('✅ Redis Connected'));
 
-export default client;
+await redisClient.connect();
+
+export default redisClient;
