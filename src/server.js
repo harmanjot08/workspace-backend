@@ -14,6 +14,7 @@ import roleRoutes from './routes/role.routes.js';
 import taskRoutes from './routes/task.routes.js';
 import calendarRoutes from './routes/calendar.routes.js';
 import adminRoutes from './routes/admin.routes.js';
+import contactRoutes from './routes/contact.routes.js';
 dotenv.config();
 const app = express();
 app.use(helmet());
@@ -54,7 +55,7 @@ app.use('/api/roles', roleRoutes);
 app.use('/api/tasks', taskRoutes);
 app.use('/api/calendar', calendarRoutes);
 app.use('/api/admin', adminRoutes);
-
+app.use('/api/contact', contactRoutes);
 
 app.use('*', (req, res) => {
     res.status(404).json({ message: 'Route not found' });
