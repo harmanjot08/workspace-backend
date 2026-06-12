@@ -43,9 +43,9 @@ export const loginUser = async (email, password) => {
     if (!isPasswordValid) {
         throw new AuthError('Invalid password');
     }
-    //if (!user.isEmailVerified) {
-        //throw new AuthError('Please verify your email first');
-    //}
+    if (!user.isEmailVerified) {
+        throw new AuthError('Please verify your email first');
+    }
     const accessToken = generateAccessToken(user);
     const refreshToken = generateRefreshToken(user);
     await redisClient.setEx(
