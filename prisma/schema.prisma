@@ -12,7 +12,6 @@ model Company {
   name            String    @unique
   email           String    @unique
   plan            String    @default("FREE")
-  isActive        Boolean   @default(true)
 
   users           User[]
   chats           Chat[]
