@@ -12,6 +12,7 @@ router.use(roleCheck('admin'));
 // ===== COMPANIES =====
 router.get('/companies', adminController.getAllCompanies);
 router.get('/companies/:companyId', adminController.getCompany);
+router.post('/companies', adminController.createCompany);
 router.put('/companies/:companyId', adminController.updateCompany);
 
 // ===== PRICING PLANS =====

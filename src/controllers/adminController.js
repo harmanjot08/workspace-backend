@@ -4,6 +4,38 @@ import { ValidationError, NotFoundError } from '../utils/errorHandler.js';
 
 // ===== COMPANIES =====
 
+export const createCompany = async (req, res) => {
+    try {
+        const { name, email, plan } = req.body;
+
+        if (!name || !email) {
+            throw new ValidationError('Name and email required');
+        }
+
+        const company = await prisma.company.create({
+            data: {
+                name,
+                email,
+                plan: plan || 'FREE',
+            },
+            include: {
+                subscriptions: { include: { plan: true } },
+                users: { select: { id: true } },
+            },
+        });
+
+        logger.info(`Company created: ${company.id}`);
+
+        res.status(201).json({
+            message: 'Company created',
+            company,
+        });
+    } catch (error) {
+        logger.error('Create company error:', error.message);
+        res.status(error.statusCode || 500).json({ message: error.message });
+    }
+};
+
 export const getAllCompanies = async (req, res) => {
     try {
         const companies = await prisma.company.findMany({
