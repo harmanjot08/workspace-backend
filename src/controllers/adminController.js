@@ -110,6 +110,63 @@ export const updateCompany = async (req, res) => {
         logger.error('Update company error:', error.message);
         res.status(error.statusCode || 500).json({ message: error.message });
     }
+}; export const updateCompany = async (req, res) => {
+    try {
+        const { companyId } = req.params;
+        const { name, email, plan } = req.body;
+
+        const company = await prisma.company.update({
+            where: { id: companyId },
+            data: {
+                name: name || undefined,
+                email: email || undefined,
+                plan: plan || undefined,
+            },
+            include: { subscriptions: { include: { plan: true } } },
+        });
+
+        // Agar plan change hua aur FREE nahi hai, toh subscription create karo
+        if (plan && plan !== 'FREE') {
+            // Check karo agar already subscription hai
+            const existingSubscription = await prisma.subscription.findFirst({
+                where: { companyId, status: 'active' },
+            });
+
+            if (!existingSubscription) {
+                // Plan ID dhundo plan name se
+                const pricingPlan = await prisma.pricingPlan.findFirst({
+                    where: { name: plan },
+                });
+
+                if (pricingPlan) {
+                    await prisma.subscription.create({
+                        data: {
+                            companyId,
+                            planId: pricingPlan.id,
+                            status: 'active',
+                            startDate: new Date(),
+                        },
+                    });
+                }
+            }
+        }
+
+        // Updated company fetch karo
+        const updatedCompany = await prisma.company.findUnique({
+            where: { id: companyId },
+            include: { subscriptions: { include: { plan: true } } },
+        });
+
+        logger.info(`Company updated: ${companyId}`);
+
+        res.status(200).json({
+            message: 'Company updated',
+            company: updatedCompany,
+        });
+    } catch (error) {
+        logger.error('Update company error:', error.message);
+        res.status(error.statusCode || 500).json({ message: error.message });
+    }
 };
 
 export const deleteCompany = async (req, res) => {
