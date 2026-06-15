@@ -27,6 +27,8 @@ router.post('/subscriptions', adminController.createSubscription);
 router.put('/subscriptions/:subscriptionId', adminController.updateSubscription);
 router.delete('/subscriptions/:subscriptionId', adminController.cancelSubscription);
 
+router.delete('/companies/:companyId', adminController.deleteCompany);
+
 // ===== ANALYTICS =====
 router.get('/analytics', adminController.getAnalytics);
 

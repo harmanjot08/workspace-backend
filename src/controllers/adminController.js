@@ -112,6 +112,25 @@ export const updateCompany = async (req, res) => {
     }
 };
 
+export const deleteCompany = async (req, res) => {
+    try {
+        const { companyId } = req.params;
+
+        await prisma.company.delete({
+            where: { id: companyId },
+        });
+
+        logger.info(`Company deleted: ${companyId}`);
+
+        res.status(200).json({
+            message: 'Company deleted',
+        });
+    } catch (error) {
+        logger.error('Delete company error:', error.message);
+        res.status(error.statusCode || 500).json({ message: error.message });
+    }
+};
+
 // ===== PRICING PLANS =====
 
 export const getAllPricingPlans = async (req, res) => {
