@@ -8,6 +8,7 @@ const router = express.Router();
 router.use(authenticate);
 
 router.get('/', taskController.getTasks);
+router.get('/my-tasks', taskController.getUserTasks);
 router.post('/', roleCheck('manager', 'admin'), taskController.createTask);
 router.put('/:taskId', roleCheck('manager', 'admin'), taskController.updateTask);
 router.delete('/:taskId', roleCheck('manager', 'admin'), taskController.deleteTask);
