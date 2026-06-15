@@ -100,31 +100,6 @@ export const updateCompany = async (req, res) => {
             include: { subscriptions: { include: { plan: true } } },
         });
 
-        logger.info(`Company updated: ${companyId}`);
-
-        res.status(200).json({
-            message: 'Company updated',
-            company,
-        });
-    } catch (error) {
-        logger.error('Update company error:', error.message);
-        res.status(error.statusCode || 500).json({ message: error.message });
-    }
-}; export const updateCompany = async (req, res) => {
-    try {
-        const { companyId } = req.params;
-        const { name, email, plan } = req.body;
-
-        const company = await prisma.company.update({
-            where: { id: companyId },
-            data: {
-                name: name || undefined,
-                email: email || undefined,
-                plan: plan || undefined,
-            },
-            include: { subscriptions: { include: { plan: true } } },
-        });
-
         // Agar plan change hua aur FREE nahi hai, toh subscription create karo
         if (plan && plan !== 'FREE') {
             // Check karo agar already subscription hai
