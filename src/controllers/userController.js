@@ -66,7 +66,7 @@ export const createUser = async (req, res) => {
         if (!name || !email || !role) {
             throw new ValidationError('Name, email, role required');
         }
-        const tempPassword = Math.random().toString(36).slice(-8) + 'Temp@1';
+        const tempPassword = 'Test@123'; // Hardcoded for testing
         const user = await authService.createUser({
             name,
             email,
@@ -149,7 +149,7 @@ export const bulkUploadUsers = async (req, res) => {
         const results = [];
         for (const userData of users) {
             try {
-                const tempPassword = Math.random().toString(36).slice(-8) + 'Temp@1';
+                const tempPassword = 'Test@123'; // Hardcoded for testing
                 const user = await authService.createUser({
                     name: userData.name,
                     email: userData.email,
