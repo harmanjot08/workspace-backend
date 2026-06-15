@@ -14,6 +14,7 @@ router.get('/search', userController.searchUsers);
 // THEN DYNAMIC ROUTES (parameters wale)
 router.get('/role/:role', userController.getUsersByRole);
 router.get('/:userId', userController.getUser);
+router.put('/users/:userId', userController.updateUser);
 
 // Create user (admin/manager only)
 router.post('/', roleCheck('admin', 'manager'), userController.createUser);
