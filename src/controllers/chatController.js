@@ -160,15 +160,17 @@ export const sendMessage = async (req, res) => {
     try {
         const { chatId } = req.params;
         const { content } = req.body;
-        const { id: userId } = req.user;
+        const { id: userId } = req.user;  // Current user se ID le
+
         if (!content || content.trim() === '') {
             throw new ValidationError('Message content required');
         }
+
         const message = await prisma.message.create({
             data: {
                 content,
                 chatId,
-                userId,
+                userId,  // Ye correct user ID hona chahiye
             },
             include: {
                 user: {
@@ -179,6 +181,7 @@ export const sendMessage = async (req, res) => {
                 },
             },
         });
+
         logger.info(`Message sent: ${message.id}`);
         res.status(201).json({
             message: 'Message sent',
