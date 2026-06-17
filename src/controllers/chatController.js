@@ -220,22 +220,42 @@ export const addReaction = async (req, res) => {
 export const deleteMessage = async (req, res) => {
     try {
         const { messageId } = req.params;
+        const { deleteType } = req.body; // 'everyone' or 'me'
         const { id: userId } = req.user;
+
         const message = await prisma.message.findUnique({
             where: { id: messageId },
         });
+
         if (!message) {
             throw new NotFoundError('Message not found');
         }
+
         if (message.userId !== userId) {
             throw new ValidationError('Can only delete own messages');
         }
-        await prisma.message.delete({
-            where: { id: messageId },
-        });
-        logger.info(`Message deleted: ${messageId}`);
+
+        if (deleteType === 'everyone') {
+            // Delete for everyone - remove message completely
+            await prisma.message.delete({
+                where: { id: messageId },
+            });
+            logger.info(`Message deleted for everyone: ${messageId}`);
+        } else if (deleteType === 'me') {
+            // Delete for me - just mark as deleted
+            await prisma.message.update({
+                where: { id: messageId },
+                data: {
+                    content: '[This message was deleted]',
+                    isDeleted: true,
+                },
+            });
+            logger.info(`Message deleted for user: ${messageId}`);
+        }
+
         res.status(200).json({
             message: 'Message deleted',
+            deleteType,
         });
     } catch (error) {
         logger.error('Delete message error:', error.message);

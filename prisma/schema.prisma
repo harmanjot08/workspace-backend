@@ -110,6 +110,7 @@ model ChatMember {
 model Message {
   id              String    @id @default(uuid())
   content         String
+  isDeleted      Boolean   @default(false)
   
   chatId          String
   userId          String
