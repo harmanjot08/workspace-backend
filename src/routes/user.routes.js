@@ -7,9 +7,10 @@ const router = express.Router();
 
 router.use(authenticate);
 
-// SPECIFIC ROUTES PEHLE (exact match)
+// SPECIFIC ROUTES 
 router.post('/bulk/upload', roleCheck('admin'), userController.bulkUploadUsers);
 router.get('/search', userController.searchUsers);
+router.put('/profile-picture', userController.uploadProfilePicture);
 
 // THEN DYNAMIC ROUTES (parameters wale)
 router.get('/role/:role', userController.getUsersByRole);
@@ -25,7 +26,7 @@ router.put('/:userId', roleCheck('admin', 'manager'), userController.updateUser)
 // Delete user
 router.delete('/:userId', roleCheck('admin'), userController.deleteUser);
 
-// Get all users (last mein)
+// Get all users
 router.get('/', userController.getAllUsers);
 
 export default router;

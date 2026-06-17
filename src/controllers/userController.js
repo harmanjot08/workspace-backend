@@ -242,3 +242,29 @@ export const getUsersByRole = async (req, res) => {
         res.status(500).json({ message: error.message });
     }
 };
+
+export const uploadProfilePicture = async (req, res) => {
+    try {
+        const { id: userId } = req.user;
+        const { profilePicture } = req.body; // base64 string expected
+
+        if (!profilePicture) {
+            throw new ValidationError('Profile picture required');
+        }
+
+        const user = await prisma.user.update({
+            where: { id: userId },
+            data: { profilePicture },
+            select: { id: true, name: true, email: true, profilePicture: true }
+        });
+
+        logger.info(`Profile picture updated: ${userId}`);
+        res.status(200).json({
+            message: 'Profile picture updated',
+            user
+        });
+    } catch (error) {
+        logger.error('Upload profile picture error:', error.message);
+        res.status(error.statusCode || 500).json({ message: error.message });
+    }
+};
