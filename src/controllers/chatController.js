@@ -143,6 +143,17 @@ export const getChat = async (req, res) => {
                         reactions: true,
                         readReceipts: true,
                     },
+                    select: {
+                        id: true,
+                        content: true,
+                        isDeleted: true,
+                        userId: true,
+                        createdAt: true,
+                        updatedAt: true,
+                        user: true,
+                        reactions: true,
+                        readReceipts: true,
+                    },
                 },
             },
         });
