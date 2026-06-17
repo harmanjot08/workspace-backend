@@ -110,7 +110,10 @@ model ChatMember {
 model Message {
   id              String    @id @default(uuid())
   content         String
-  isDeleted      Boolean   @default(false)
+  isDeleted       Boolean   @default(false)
+  fileUrl         String?
+  fileName        String?
+  fileType        String?
   
   chatId          String
   userId          String

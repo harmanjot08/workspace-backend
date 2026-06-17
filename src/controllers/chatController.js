@@ -161,18 +161,21 @@ export const getChat = async (req, res) => {
 export const sendMessage = async (req, res) => {
     try {
         const { chatId } = req.params;
-        const { content } = req.body;
+        const { content, fileUrl, fileName, fileType } = req.body;
         const { id: userId } = req.user;
 
-        if (!content || content.trim() === '') {
-            throw new ValidationError('Message content required');
+        if (!content?.trim() && !fileUrl) {
+            throw new ValidationError('Message content or file required');
         }
 
         const message = await prisma.message.create({
             data: {
-                content,
+                content: content || '',
                 chatId,
                 userId,
+                fileUrl: fileUrl || null,
+                fileName: fileName || null,
+                fileType: fileType || null,
             },
             include: {
                 user: {
