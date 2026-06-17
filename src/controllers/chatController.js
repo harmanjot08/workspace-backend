@@ -125,6 +125,7 @@ export const getChat = async (req, res) => {
                                 id: true,
                                 name: true,
                                 email: true,
+                                profilePicture: true,
                             },
                         },
                     },
@@ -136,6 +137,7 @@ export const getChat = async (req, res) => {
                             select: {
                                 id: true,
                                 name: true,
+                                profilePicture: true,
                             },
                         },
                         reactions: true,
@@ -160,7 +162,7 @@ export const sendMessage = async (req, res) => {
     try {
         const { chatId } = req.params;
         const { content } = req.body;
-        const { id: userId } = req.user;  // Current user se ID le
+        const { id: userId } = req.user;
 
         if (!content || content.trim() === '') {
             throw new ValidationError('Message content required');
@@ -170,13 +172,14 @@ export const sendMessage = async (req, res) => {
             data: {
                 content,
                 chatId,
-                userId,  // Ye correct user ID hona chahiye
+                userId,
             },
             include: {
                 user: {
                     select: {
                         id: true,
                         name: true,
+                        profilePicture: true,
                     },
                 },
             },
