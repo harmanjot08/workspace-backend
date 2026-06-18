@@ -359,3 +359,68 @@ export const archiveChat = async (req, res) => {
         res.status(error.statusCode || 500).json({ message: error.message });
     }
 };
+
+export const pinChat = async (req, res) => {
+    try {
+        const { chatId } = req.params;
+        const { id: userId } = req.user;
+
+        const chat = await prisma.chat.findUnique({
+            where: { id: chatId },
+        });
+
+        if (!chat) {
+            throw new NotFoundError('Chat not found');
+        }
+
+        const updatedChat = await prisma.chat.update({
+            where: { id: chatId },
+            data: {
+                isPinned: true,
+                pinnedBy: userId,
+            },
+            include: {
+                chatMembers: { include: { user: true } },
+                messages: { take: 1, orderBy: { createdAt: 'desc' } },
+            },
+        });
+
+        logger.info(`Chat pinned: ${chatId}`);
+        res.status(200).json({ message: 'Chat pinned', chat: updatedChat });
+    } catch (error) {
+        logger.error('Pin chat error:', error.message);
+        res.status(error.statusCode || 500).json({ message: error.message });
+    }
+};
+
+export const unpinChat = async (req, res) => {
+    try {
+        const { chatId } = req.params;
+
+        const chat = await prisma.chat.findUnique({
+            where: { id: chatId },
+        });
+
+        if (!chat) {
+            throw new NotFoundError('Chat not found');
+        }
+
+        const updatedChat = await prisma.chat.update({
+            where: { id: chatId },
+            data: {
+                isPinned: false,
+                pinnedBy: null,
+            },
+            include: {
+                chatMembers: { include: { user: true } },
+                messages: { take: 1, orderBy: { createdAt: 'desc' } },
+            },
+        });
+
+        logger.info(`Chat unpinned: ${chatId}`);
+        res.status(200).json({ message: 'Chat unpinned', chat: updatedChat });
+    } catch (error) {
+        logger.error('Unpin chat error:', error.message);
+        res.status(error.statusCode || 500).json({ message: error.message });
+    }
+};

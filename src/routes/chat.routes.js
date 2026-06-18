@@ -10,6 +10,8 @@ router.use(authenticate);
 router.post('/', chatController.createChat);
 router.get('/', chatController.getChats);
 router.get('/:chatId', chatController.getChat);
+router.put('/:chatId/pin', chatController.pinChat);
+router.put('/:chatId/unpin', chatController.unpinChat);chatApi.js
 
 // Message routes
 router.post('/:chatId/messages', chatController.sendMessage);

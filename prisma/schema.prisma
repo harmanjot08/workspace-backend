@@ -76,6 +76,8 @@ model Chat {
   name            String?
   isGroup         Boolean   @default(false)
   isArchived      Boolean   @default(false)
+  isPinned        Boolean   @default(false)
+  pinnedBy        String?
   
   createdBy       String
   companyId       String
