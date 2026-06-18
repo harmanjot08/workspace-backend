@@ -424,3 +424,46 @@ export const unpinChat = async (req, res) => {
         res.status(error.statusCode || 500).json({ message: error.message });
     }
 };
+
+export const sendMeetingLink = async (req, res) => {
+    try {
+        const { chatId } = req.params;
+        const { id: userId } = req.user;
+
+        // Generate unique meeting ID
+        const meetingId = `meet-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+        const meetingLink = `${process.env.FRONTEND_URL || 'https://workspace-frontend.vercel.app'}/meeting/${meetingId}`;
+
+        // Send as message
+        const message = await prisma.message.create({
+            data: {
+                content: `📞 Meeting Link: ${meetingLink}`,
+                chatId,
+                userId,
+                fileUrl: null,
+                fileName: null,
+                fileType: null,
+            },
+            include: {
+                user: {
+                    select: {
+                        id: true,
+                        name: true,
+                        profilePicture: true,
+                    },
+                },
+            },
+        });
+
+        logger.info(`Meeting link sent: ${meetingId}`);
+        res.status(201).json({
+            message: 'Meeting link sent',
+            data: message,
+            meetingId,
+            meetingLink,
+        });
+    } catch (error) {
+        logger.error('Send meeting link error:', error.message);
+        res.status(error.statusCode || 500).json({ message: error.message });
+    }
+};

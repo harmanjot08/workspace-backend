@@ -13,10 +13,12 @@ router.get('/:chatId', chatController.getChat);
 router.put('/:chatId/pin', chatController.pinChat);
 router.put('/:chatId/unpin', chatController.unpinChat);
 
+
 // Message routes
 router.post('/:chatId/messages', chatController.sendMessage);
 router.delete('/messages/:messageId', chatController.deleteMessage);
 router.post('/messages/:messageId/read', chatController.markAsRead);
+router.post('/:chatId/meeting-link', chatController.sendMeetingLink);
 
 // Reaction routes
 router.post('/messages/:messageId/reactions', chatController.addReaction);
