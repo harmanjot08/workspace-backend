@@ -1,6 +1,7 @@
 import prisma from '../config/database.config.js';
 import { logger } from '../utils/logger.js';
 import { ValidationError, NotFoundError } from '../utils/errorHandler.js';
+import { createDailyRoom } from '../services/dailyService.js';
 export const createChat = async (req, res) => {
     try {
         const { participantIds, chatName, isGroup } = req.body;
@@ -430,9 +431,9 @@ export const sendMeetingLink = async (req, res) => {
         const { chatId } = req.params;
         const { id: userId } = req.user;
 
-        // Generate unique meeting ID
-        const meetingId = `meet-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-        const meetingLink = `${process.env.FRONTEND_URL || 'https://workspace-frontend-beige.vercel.app'}/meeting/${meetingId}`;
+        // Create Daily room
+        const room = await createDailyRoom();
+        const meetingLink = room.url;
 
         // Send as message
         const message = await prisma.message.create({
@@ -455,15 +456,18 @@ export const sendMeetingLink = async (req, res) => {
             },
         });
 
-        logger.info(`Meeting link sent: ${meetingId}`);
+        logger.info(`Meeting link sent: ${meetingLink}`);
+
         res.status(201).json({
             message: 'Meeting link sent',
             data: message,
-            meetingId,
             meetingLink,
         });
+
     } catch (error) {
         logger.error('Send meeting link error:', error.message);
-        res.status(error.statusCode || 500).json({ message: error.message });
+        res.status(error.statusCode || 500).json({
+            message: error.message
+        });
     }
 };
