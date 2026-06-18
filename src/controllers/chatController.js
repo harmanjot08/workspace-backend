@@ -432,13 +432,7 @@ export const sendMeetingLink = async (req, res) => {
 
         // Generate unique meeting ID
         const meetingId = `meet-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-        // Determine user role from request
-        const user = await prisma.user.findUnique({
-            where: { id: userId },
-        });
-
-        const rolePrefix = user?.role === 'manager' ? 'manager' : 'user';
-        const meetingLink = `${process.env.FRONTEND_URL || 'https://workspace-frontend.vercel.app'}/${rolePrefix}/meeting/${meetingId}`;
+        const meetingLink = `${process.env.FRONTEND_URL || 'https://workspace-frontend-beige.vercel.app'}/meeting/${meetingId}`;
 
         // Send as message
         const message = await prisma.message.create({
