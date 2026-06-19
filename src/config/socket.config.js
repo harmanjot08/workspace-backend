@@ -62,18 +62,26 @@ export const initializeSocket = (httpServer) => {
             logger.info(`User ${socket.id} joined meeting: ${meetingId}`);
         });
         socket.on('offer', ({ meetingId, offer }) => {
+            console.log("SERVER RECEIVED OFFER:", meetingId);
+
             socket.to(`meeting-${meetingId}`).emit('offer', {
                 offer,
                 sender: socket.id,
             });
         });
+
         socket.on('answer', ({ meetingId, answer }) => {
+            console.log("SERVER RECEIVED ANSWER:", meetingId);
+
             socket.to(`meeting-${meetingId}`).emit('answer', {
                 answer,
                 sender: socket.id,
             });
         });
+
         socket.on('ice-candidate', ({ meetingId, candidate }) => {
+            console.log("SERVER RECEIVED ICE CANDIDATE:", meetingId);
+
             socket.to(`meeting-${meetingId}`).emit('ice-candidate', {
                 candidate,
                 sender: socket.id,
