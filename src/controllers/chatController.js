@@ -1,7 +1,6 @@
 import prisma from '../config/database.config.js';
 import { logger } from '../utils/logger.js';
 import { ValidationError, NotFoundError } from '../utils/errorHandler.js';
-import { createDailyRoom } from '../services/dailyService.js';
 export const createChat = async (req, res) => {
     try {
         const { participantIds, chatName, isGroup } = req.body;
@@ -431,9 +430,8 @@ export const sendMeetingLink = async (req, res) => {
         const { chatId } = req.params;
         const { id: userId } = req.user;
 
-        // Create Daily room
-        const room = await createDailyRoom();
-        const meetingLink = room.url;
+        const meetingId = `meet-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+        const meetingLink = `${process.env.FRONTEND_URL}/meeting/${meetingId}`;
 
         // Send as message
         const message = await prisma.message.create({

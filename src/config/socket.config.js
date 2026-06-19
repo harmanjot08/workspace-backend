@@ -55,6 +55,30 @@ export const initializeSocket = (httpServer) => {
                 userId: data.userId,
             });
         });
+        socket.on('join-meeting', (meetingId) => {
+            socket.join(`meeting-${meetingId}`);
+            socket.to(`meeting-${meetingId}`).emit('user-joined', socket.id);
+
+            logger.info(`User ${socket.id} joined meeting: ${meetingId}`);
+        });
+        socket.on('offer', ({ meetingId, offer }) => {
+            socket.to(`meeting-${meetingId}`).emit('offer', {
+                offer,
+                sender: socket.id,
+            });
+        });
+        socket.on('answer', ({ meetingId, answer }) => {
+            socket.to(`meeting-${meetingId}`).emit('answer', {
+                answer,
+                sender: socket.id,
+            });
+        });
+        socket.on('ice-candidate', ({ meetingId, candidate }) => {
+            socket.to(`meeting-${meetingId}`).emit('ice-candidate', {
+                candidate,
+                sender: socket.id,
+            });
+        });
         socket.on('disconnect', () => {
             let offlineUserId;
             for (const [userId, socketId] of onlineUsers.entries()) {
