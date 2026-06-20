@@ -87,6 +87,17 @@ export const initializeSocket = (httpServer) => {
                 sender: socket.id,
             });
         });
+
+        socket.on('send-meeting-message', ({ meetingId, message, userName, userId }) => {
+            io.to(`meeting-${meetingId}`).emit('receive-meeting-message', {
+                id: Date.now(),
+                message,
+                userName,
+                userId,
+                createdAt: new Date(),
+            });
+        });
+
         socket.on('disconnect', () => {
             let offlineUserId;
             for (const [userId, socketId] of onlineUsers.entries()) {
