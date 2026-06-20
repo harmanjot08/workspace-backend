@@ -15,7 +15,7 @@ import taskRoutes from './routes/task.routes.js';
 import calendarRoutes from './routes/calendar.routes.js';
 import adminRoutes from './routes/admin.routes.js';
 import contactRoutes from './routes/contact.routes.js';
-import meetingRoutes from './routes/meetingRoutes.js';
+import meetingRoutes from './routes/meetingRoutes.js'; 
 dotenv.config();
 const app = express();
 app.use(helmet());
