@@ -304,3 +304,15 @@ model PricingPlan {
 
   @@map("pricing_plans")
 }
+
+model Meeting {
+  id        String   @id @default(cuid())
+  meetingId String   @unique
+  chatId    String
+  createdAt DateTime @default(now())
+  status    String   @default("ACTIVE") // ACTIVE or INACTIVE
+  createdBy String
+
+  @@index([chatId])
+  @@index([status])
+}

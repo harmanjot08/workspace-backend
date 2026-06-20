@@ -428,44 +428,55 @@ export const unpinChat = async (req, res) => {
 export const sendMeetingLink = async (req, res) => {
     try {
         const { chatId } = req.params;
-        const { id: userId } = req.user;
+        const userId = req.user.id;
 
+        // Pehle wala active link ko INACTIVE mark karo
+        await prisma.meeting.updateMany({
+            where: {
+                chatId: chatId,
+                status: 'ACTIVE',
+            },
+            data: {
+                status: 'INACTIVE',
+            },
+        });
+
+        // Naya meeting link generate karo
         const meetingId = `meet-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-        const meetingLink = `${process.env.FRONTEND_URL}/meeting/${meetingId}`;
 
-        // Send as message
+        const meeting = await prisma.meeting.create({
+            data: {
+                meetingId,
+                chatId,
+                createdBy: userId,
+                status: 'ACTIVE',
+            },
+        });
+
+        // Chat message object banao
+        const messageContent = `Meeting Link: https://workspace-frontend-beige.vercel.app/meeting/${meeting.meetingId}`;
+
+        // Message database mein save karo
         const message = await prisma.message.create({
             data: {
-                content: `📞 Meeting Link: ${meetingLink}`,
-                chatId,
-                userId,
-                fileUrl: null,
-                fileName: null,
-                fileType: null,
-            },
-            include: {
-                user: {
-                    select: {
-                        id: true,
-                        name: true,
-                        profilePicture: true,
-                    },
-                },
+                content: messageContent,
+                chatId: chatId,
+                userId: userId,
             },
         });
 
-        logger.info(`Meeting link sent: ${meetingLink}`);
-
-        res.status(201).json({
-            message: 'Meeting link sent',
-            data: message,
-            meetingLink,
+        res.json({
+            success: true,
+            data: {
+                id: message.id,
+                content: message.content,
+                chatId: message.chatId,
+                userId: message.userId,
+                createdAt: message.createdAt,
+            },
         });
-
     } catch (error) {
-        logger.error('Send meeting link error:', error.message);
-        res.status(error.statusCode || 500).json({
-            message: error.message
-        });
+        console.error('sendMeetingLink error:', error);
+        res.status(500).json({ error: error.message });
     }
 };
