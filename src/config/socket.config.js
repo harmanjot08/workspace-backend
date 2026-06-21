@@ -57,34 +57,42 @@ export const initializeSocket = (httpServer) => {
         });
         socket.on('join-meeting', (meetingId) => {
             socket.join(`meeting-${meetingId}`);
-            socket.to(`meeting-${meetingId}`).emit('user-joined', socket.id);
+
+            // Get all sockets in the meeting room
+            const room = io.sockets.adapter.rooms.get(`meeting-${meetingId}`);
+            const participantsInRoom = Array.from(room || []).filter(id => id !== socket.id);
+
+            // Send existing participants to the new user
+            socket.emit('existing-participants', {
+                participants: participantsInRoom.map(id => ({ socketId: id }))
+            });
+
+            // Notify all existing participants about the new user
+            socket.to(`meeting-${meetingId}`).emit('user-joined', {
+                socketId: socket.id,
+                userName: socket.user?.name || 'User'
+            });
 
             logger.info(`User ${socket.id} joined meeting: ${meetingId}`);
         });
-        socket.on('offer', ({ meetingId, offer }) => {
-            console.log("SERVER RECEIVED OFFER:", meetingId);
-
-            socket.to(`meeting-${meetingId}`).emit('offer', {
+        socket.on('offer', ({ meetingId, offer, targetId }) => {
+            io.to(targetId).emit('offer', {
                 offer,
-                sender: socket.id,
+                fromId: socket.id,
             });
         });
 
-        socket.on('answer', ({ meetingId, answer }) => {
-            console.log("SERVER RECEIVED ANSWER:", meetingId);
-
-            socket.to(`meeting-${meetingId}`).emit('answer', {
+        socket.on('answer', ({ meetingId, answer, targetId }) => {
+            io.to(targetId).emit('answer', {
                 answer,
-                sender: socket.id,
+                fromId: socket.id,
             });
         });
 
-        socket.on('ice-candidate', ({ meetingId, candidate }) => {
-            console.log("SERVER RECEIVED ICE CANDIDATE:", meetingId);
-
-            socket.to(`meeting-${meetingId}`).emit('ice-candidate', {
+        socket.on('ice-candidate', ({ meetingId, candidate, targetId }) => {
+            io.to(targetId).emit('ice-candidate', {
                 candidate,
-                sender: socket.id,
+                fromId: socket.id,
             });
         });
 
