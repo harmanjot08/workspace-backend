@@ -78,14 +78,25 @@ export const initializeSocket = (httpServer) => {
             const room = io.sockets.adapter.rooms.get(`meeting-${meetingId}`);
             const participantsInRoom = Array.from(room || []).filter(id => id !== socket.id);
 
-            socket.emit('existing-participants', {
-                participants: participantsInRoom.map(id => ({ socketId: id }))
+            // ✅ NEW CODE - Get user data for all participants
+            const participants = [];
+            participantsInRoom.forEach(socketId => {
+                const socketObj = io.sockets.sockets.get(socketId);
+                if (socketObj?.user?.name) {
+                    participants.push({
+                        socketId: socketId,
+                        userName: socketObj.user.name
+                    });
+                }
             });
 
-            // Notify all existing participants about the new user
+            socket.emit('existing-participants', {
+                participants: participants  // ✅ Now includes userName
+            });
+
             socket.to(`meeting-${meetingId}`).emit('user-joined', {
                 socketId: socket.id,
-                userName: socket.user?.name || 'User'  // Now socket.user will have data
+                userName: socket.user?.name || 'User'
             });
 
             logger.info(`User ${socket.id} joined meeting: ${meetingId}`);
