@@ -73,12 +73,27 @@ export const initializeSocket = (httpServer) => {
             });
         });
         socket.on('join-meeting', (meetingId) => {
+            // Add expiry check at the start
+            const parts = meetingId.split('-');
+            const createdAt = parseInt(parts[1]);
+            const now = Date.now();
+            const expiryTime = 60 * 60 * 1000; // 1 hour
+
+            if (now - createdAt > expiryTime) {
+                socket.emit('meeting-expired', {
+                    message: 'Meeting link has expired. Please ask for a new link.'
+                });
+                logger.info(`User ${socket.id} tried to join expired meeting: ${meetingId}`);
+                return; // Exit - don't join
+            }
+
+            // If not expired, proceed with original code
             socket.join(`meeting-${meetingId}`);
 
             const room = io.sockets.adapter.rooms.get(`meeting-${meetingId}`);
             const participantsInRoom = Array.from(room || []).filter(id => id !== socket.id);
 
-            // ✅ NEW CODE - Get user data for all participants
+            // Get user data for all participants
             const participants = [];
             participantsInRoom.forEach(socketId => {
                 const socketObj = io.sockets.sockets.get(socketId);
