@@ -430,31 +430,11 @@ export const sendMeetingLink = async (req, res) => {
         const { chatId } = req.params;
         const userId = req.user.id;
 
-        // Pehle wala active link ko INACTIVE mark karo
-        await prisma.meeting.updateMany({
-            where: {
-                chatId: chatId,
-                status: 'ACTIVE',
-            },
-            data: {
-                status: 'INACTIVE',
-            },
-        });
-
-        // Naya meeting link generate karo
+        // Simple meeting ID generate karo
         const meetingId = `meet-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
-        const meeting = await prisma.meeting.create({
-            data: {
-                meetingId,
-                chatId,
-                createdBy: userId,
-                status: 'ACTIVE',
-            },
-        });
-
-        // Chat message object banao
-        const messageContent = `Meeting Link: https://workspace-frontend-beige.vercel.app/meeting/${meeting.meetingId}`;
+        // Message banao
+        const messageContent = `Meeting Link: https://workspace-frontend-beige.vercel.app/meeting/${meetingId}`;
 
         // Message database mein save karo
         const message = await prisma.message.create({
