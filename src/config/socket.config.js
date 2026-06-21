@@ -1,5 +1,6 @@
 import { Server } from 'socket.io';
 import { logger } from '../utils/logger.js';
+import jwt from 'jsonwebtoken';
 let io;
 export const initializeSocket = (httpServer) => {
     io = new Server(httpServer, {
@@ -8,6 +9,22 @@ export const initializeSocket = (httpServer) => {
             methods: ['GET', 'POST'],
         },
     });
+
+    io.use((socket, next) => {
+        const token = socket.handshake.auth.token;
+        if (token) {
+            try {
+                const decoded = jwt.verify(token, process.env.JWT_SECRET);
+                socket.user = decoded;
+                next();
+            } catch (err) {
+                next(new Error('Authentication error'));
+            }
+        } else {
+            next(new Error('No token provided'));
+        }
+    });
+
     const onlineUsers = new Map();
     io.on('connection', (socket) => {
         logger.info(`User connected: ${socket.id}`);
@@ -58,11 +75,9 @@ export const initializeSocket = (httpServer) => {
         socket.on('join-meeting', (meetingId) => {
             socket.join(`meeting-${meetingId}`);
 
-            // Get all sockets in the meeting room
             const room = io.sockets.adapter.rooms.get(`meeting-${meetingId}`);
             const participantsInRoom = Array.from(room || []).filter(id => id !== socket.id);
 
-            // Send existing participants to the new user
             socket.emit('existing-participants', {
                 participants: participantsInRoom.map(id => ({ socketId: id }))
             });
@@ -70,7 +85,7 @@ export const initializeSocket = (httpServer) => {
             // Notify all existing participants about the new user
             socket.to(`meeting-${meetingId}`).emit('user-joined', {
                 socketId: socket.id,
-                userName: socket.user?.name || 'User'
+                userName: socket.user?.name || 'User'  // Now socket.user will have data
             });
 
             logger.info(`User ${socket.id} joined meeting: ${meetingId}`);
