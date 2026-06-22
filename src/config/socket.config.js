@@ -116,6 +116,23 @@ export const initializeSocket = (httpServer) => {
 
             logger.info(`User ${socket.id} joined meeting: ${meetingId}`);
         });
+
+        socket.on('raise-hand', ({ meetingId, socketId, userName, userId }) => {
+            io.to(`meeting-${meetingId}`).emit('raise-hand', {
+                socketId,
+                userName,
+                userId,
+            });
+            logger.info(`${userName} raised hand in meeting: ${meetingId}`);
+        });
+
+        socket.on('lower-hand', ({ meetingId, userId }) => {
+            io.to(`meeting-${meetingId}`).emit('lower-hand', {
+                userId,
+            });
+            logger.info(`User ${userId} lowered hand in meeting: ${meetingId}`);
+        });
+
         socket.on('offer', ({ meetingId, offer, targetId }) => {
             io.to(targetId).emit('offer', {
                 offer,
