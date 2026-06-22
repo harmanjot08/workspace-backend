@@ -133,6 +133,22 @@ export const initializeSocket = (httpServer) => {
             logger.info(`User ${userId} lowered hand in meeting: ${meetingId}`);
         });
 
+        socket.on('screen-share-start', ({ meetingId, socketId, userName, userId }) => {
+            io.to(`meeting-${meetingId}`).emit('screen-share-start', {
+                socketId,
+                userName,
+                userId,
+            });
+            logger.info(`${userName} started screen sharing in meeting: ${meetingId}`);
+        });
+
+        socket.on('screen-share-stop', ({ meetingId, userId }) => {
+            io.to(`meeting-${meetingId}`).emit('screen-share-stop', {
+                userId,
+            });
+            logger.info(`User ${userId} stopped screen sharing in meeting: ${meetingId}`);
+        });
+
         socket.on('offer', ({ meetingId, offer, targetId }) => {
             io.to(targetId).emit('offer', {
                 offer,
