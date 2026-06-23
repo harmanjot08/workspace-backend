@@ -57,6 +57,7 @@ model User {
   employees       User[]    @relation("ManagerToEmployees")
   assignedTasks   Task[]    @relation("AssignedTasks")
   createdTasks    Task[]    @relation("CreatedTasks")
+  sentEmails    Email[] @relation("SentEmails")
   
   chatMembers     ChatMember[]
   messages        Message[]
@@ -69,6 +70,40 @@ model User {
   @@index([companyId])
   @@index([managerId])
   @@map("users")
+}
+
+model Email {
+  id            String   @id @default(uuid())
+  fromUserId    String
+  fromUser      User     @relation("SentEmails", fields: [fromUserId], references: [id], onDelete: Cascade)
+  
+  subject       String
+  body          String
+  
+  isRead        Boolean  @default(false)
+  isDraft       Boolean  @default(false)
+  folder        String   @default("inbox") // inbox, sent, drafts, trash
+  
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  
+  recipients    EmailRecipient[]
+  
+  @@index([fromUserId])
+  @@index([folder])
+}
+
+model EmailRecipient {
+  id            String   @id @default(cuid())
+  emailId       String
+  email         Email    @relation(fields: [emailId], references: [id], onDelete: Cascade)
+  
+  recipientEmail String  // actual email address (like "user@company.com")
+  recipientUserId String? // if recipient is in our system
+  type          String   @default("to") // to, cc, bcc
+  
+  @@index([emailId])
+  @@index([recipientEmail])
 }
 
 model Chat {
