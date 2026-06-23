@@ -51,6 +51,8 @@ import userRoutes from './routes/user.routes.js';
 app.use('/api/users', userRoutes);
 import chatRoutes from './routes/chat.routes.js';
 app.use('/api/chats', chatRoutes);
+import emailRoutes from './routes/email.routes.js';
+app.use('/api/emails', emailRoutes);
 app.use('/api/roles', roleRoutes);
 app.use('/api/tasks', taskRoutes);
 app.use('/api/calendar', calendarRoutes);
