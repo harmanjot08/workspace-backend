@@ -58,6 +58,7 @@ export const sendEmail = async (req, res) => {
                 isDraft: false,
                 folder: 'sent',
                 isPromotion,
+                isSpam,
                 recipients: {
                     create: {
                         recipientEmail: to,
