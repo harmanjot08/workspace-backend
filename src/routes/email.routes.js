@@ -19,6 +19,9 @@ router.get('/sent', emailController.getSentEmails);
 // Get drafts
 router.get('/drafts', emailController.getDrafts);
 
+// Get Promotions
+router.get('/promotions', emailController.getPromotionEmails);
+
 // Get single email
 router.get('/:emailId', emailController.getEmailById);
 

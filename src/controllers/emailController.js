@@ -110,6 +110,54 @@ export const getDrafts = async (req, res) => {
     }
 };
 
+export const getPromotionEmails = async (req, res) => {
+    try {
+        const userId = req.user.id;
+
+        const emails = await prisma.email.findMany({
+            where: {
+                isPromotion: true,
+                OR: [
+                    { fromUserId: userId },
+                    {
+                        recipients: {
+                            some: {
+                                recipientEmail: {
+                                    contains: req.user.email,
+                                },
+                            },
+                        },
+                    },
+                ],
+            },
+            include: {
+                fromUser: {
+                    select: {
+                        id: true,
+                        name: true,
+                        email: true,
+                    },
+                },
+                recipients: true,
+            },
+            orderBy: {
+                createdAt: 'desc',
+            },
+        });
+
+        res.status(200).json({
+            success: true,
+            data: emails,
+        });
+    } catch (error) {
+        logger.error('Get promotion emails error:', error.message);
+
+        res.status(500).json({
+            error: error.message,
+        });
+    }
+};
+
 export const getEmailById = async (req, res) => {
     try {
         const { emailId } = req.params;
