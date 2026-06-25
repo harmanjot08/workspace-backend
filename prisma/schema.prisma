@@ -82,9 +82,10 @@ model Email {
   
   isRead        Boolean  @default(false)
   isDraft       Boolean  @default(false)
-  folder        String   @default("inbox") // inbox, sent, drafts, trash
+  folder        String   @default("inbox") // inbox, sent, drafts, trash, spam
 
   isPromotion   Boolean  @default(false)
+  isSpam        Boolean  @default(false)
   
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
@@ -93,8 +94,9 @@ model Email {
   
   @@index([fromUserId])
   @@index([folder])
-  
+
   @@index([isPromotion])
+  @@index([isSpam])
 }
 
 model EmailRecipient {

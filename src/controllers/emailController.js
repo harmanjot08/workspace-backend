@@ -21,6 +21,24 @@ export const sendEmail = async (req, res) => {
         const isPromotion = promotionKeywords.some(keyword =>
             emailContent.includes(keyword)
         );
+
+        const spamKeywords = [
+            'win money',
+            'lottery',
+            'free crypto',
+            'free bitcoin',
+            'claim prize',
+            'congratulations you won',
+            'earn money fast',
+            'click here urgently',
+            'guaranteed income',
+            'double your money',
+        ];
+
+        const isSpam = spamKeywords.some(keyword =>
+            emailContent.includes(keyword)
+        );
+
         const userId = req.user.id;
 
         // Validate
@@ -64,9 +82,22 @@ export const getInbox = async (req, res) => {
 
         const emails = await prisma.email.findMany({
             where: {
+                isSpam: false,
+
                 OR: [
-                    { fromUserId: userId, folder: 'inbox' },
-                    { recipients: { some: { recipientEmail: { contains: req.user.email } } } },
+                    {
+                        fromUserId: userId,
+                        folder: 'inbox',
+                    },
+                    {
+                        recipients: {
+                            some: {
+                                recipientEmail: {
+                                    contains: req.user.email,
+                                },
+                            },
+                        },
+                    },
                 ],
             },
             include: {
@@ -169,6 +200,54 @@ export const getPromotionEmails = async (req, res) => {
         });
     } catch (error) {
         logger.error('Get promotion emails error:', error.message);
+
+        res.status(500).json({
+            error: error.message,
+        });
+    }
+};
+
+export const getSpamEmails = async (req, res) => {
+    try {
+        const userId = req.user.id;
+
+        const emails = await prisma.email.findMany({
+            where: {
+                isSpam: true,
+                OR: [
+                    { fromUserId: userId },
+                    {
+                        recipients: {
+                            some: {
+                                recipientEmail: {
+                                    contains: req.user.email,
+                                },
+                            },
+                        },
+                    },
+                ],
+            },
+            include: {
+                fromUser: {
+                    select: {
+                        id: true,
+                        name: true,
+                        email: true,
+                    },
+                },
+                recipients: true,
+            },
+            orderBy: {
+                createdAt: 'desc',
+            },
+        });
+
+        res.status(200).json({
+            success: true,
+            data: emails,
+        });
+    } catch (error) {
+        logger.error('Get spam emails error:', error.message);
 
         res.status(500).json({
             error: error.message,

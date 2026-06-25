@@ -22,6 +22,9 @@ router.get('/drafts', emailController.getDrafts);
 // Get Promotions
 router.get('/promotions', emailController.getPromotionEmails);
 
+//Get Spam mail
+router.get('/spam', emailController.getSpamEmails);
+
 // Get single email
 router.get('/:emailId', emailController.getEmailById);
 
