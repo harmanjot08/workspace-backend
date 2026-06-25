@@ -39,6 +39,9 @@ export const sendEmail = async (req, res) => {
             emailContent.includes(keyword)
         );
 
+        console.log('isSpam:', isSpam);
+        console.log('subject:', subject);
+
         const userId = req.user.id;
 
         // Validate
