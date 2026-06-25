@@ -4,6 +4,23 @@ import { logger } from '../utils/logger.js';
 export const sendEmail = async (req, res) => {
     try {
         const { to, subject, body } = req.body;
+        const promotionKeywords = [
+            'offer',
+            'sale',
+            'discount',
+            'coupon',
+            'newsletter',
+            'promotion',
+            'deal',
+            'limited time',
+            'special offer',
+        ];
+
+        const emailContent = `${subject} ${body}`.toLowerCase();
+
+        const isPromotion = promotionKeywords.some(keyword =>
+            emailContent.includes(keyword)
+        );
         const userId = req.user.id;
 
         // Validate
@@ -19,6 +36,7 @@ export const sendEmail = async (req, res) => {
                 body,
                 isDraft: false,
                 folder: 'sent',
+                isPromotion,
                 recipients: {
                     create: {
                         recipientEmail: to,
