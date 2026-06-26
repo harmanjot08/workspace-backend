@@ -472,6 +472,54 @@ export const moveToTrash = async (req, res) => {
     }
 };
 
+export const restoreEmail = async (req, res) => {
+    try {
+        const { emailId } = req.params;
+        const userId = req.user.id;
+
+        const email = await prisma.email.findUnique({
+            where: {
+                id: emailId,
+            },
+        });
+
+        if (!email) {
+            return res.status(404).json({
+                message: 'Email not found',
+            });
+        }
+
+        if (email.fromUserId !== userId) {
+            return res.status(403).json({
+                message: 'Not authorized',
+            });
+        }
+
+        await prisma.email.update({
+            where: {
+                id: emailId,
+            },
+            data: {
+                folder: email.previousFolder,
+                previousFolder: null,
+            },
+        });
+
+        logger.info(`Email ${emailId} restored by ${userId}`);
+
+        res.status(200).json({
+            success: true,
+            message: 'Email restored successfully',
+        });
+    } catch (error) {
+        logger.error('Restore email error:', error.message);
+
+        res.status(500).json({
+            error: error.message,
+        });
+    }
+};
+
 export const getTrashEmails = async (req, res) => {
     try {
         const userId = req.user.id;

@@ -48,4 +48,7 @@ router.delete('/:emailId', emailController.deleteEmail);
 // move email to trash
 router.patch('/:emailId/trash', emailController.moveToTrash);
 
+// restore an email from trash
+router.patch('/:emailId/restore', emailController.restoreEmail);
+
 export default router;
