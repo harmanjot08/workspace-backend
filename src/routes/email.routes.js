@@ -25,6 +25,15 @@ router.get('/promotions', emailController.getPromotionEmails);
 //Get Spam mail
 router.get('/spam', emailController.getSpamEmails);
 
+// Get Starred emails
+router.get('/starred', emailController.getStarredEmails);
+
+//returns only the IDs of the starred emails of user
+router.get('/starred/ids', emailController.getStarredEmailIds);
+
+// endpoint to star or unstar an email
+router.patch('/:emailId/star', emailController.toggleStarredEmail);
+
 // Get single email
 router.get('/:emailId', emailController.getEmailById);
 

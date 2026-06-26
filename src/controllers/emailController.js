@@ -259,6 +259,115 @@ export const getSpamEmails = async (req, res) => {
     }
 };
 
+export const toggleStarredEmail = async (req, res) => {
+    try {
+        const { emailId } = req.params;
+        const userId = req.user.id;
+
+        const existingStar = await prisma.starredEmail.findUnique({
+            where: {
+                emailId_userId: {
+                    emailId,
+                    userId,
+                },
+            },
+        });
+
+        if (existingStar) {
+            await prisma.starredEmail.delete({
+                where: {
+                    emailId_userId: {
+                        emailId,
+                        userId,
+                    },
+                },
+            });
+
+            return res.status(200).json({
+                success: true,
+                starred: false,
+            });
+        }
+
+        await prisma.starredEmail.create({
+            data: {
+                emailId,
+                userId,
+            },
+        });
+
+        res.status(200).json({
+            success: true,
+            starred: true,
+        });
+    } catch (error) {
+        logger.error('Toggle starred email error:', error.message);
+        res.status(500).json({ error: error.message });
+    }
+};
+
+export const getStarredEmails = async (req, res) => {
+    try {
+        const userId = req.user.id;
+
+        const starredEmails = await prisma.starredEmail.findMany({
+            where: {
+                userId,
+            },
+            include: {
+                email: {
+                    include: {
+                        fromUser: {
+                            select: {
+                                id: true,
+                                name: true,
+                                email: true,
+                            },
+                        },
+                        recipients: true,
+                    },
+                },
+            },
+            orderBy: {
+                createdAt: 'desc',
+            },
+        });
+
+        const emails = starredEmails.map((item) => item.email);
+
+        res.status(200).json({
+            success: true,
+            data: emails,
+        });
+    } catch (error) {
+        logger.error('Get starred emails error:', error.message);
+        res.status(500).json({ error: error.message });
+    }
+};
+
+export const getStarredEmailIds = async (req, res) => {
+    try {
+        const userId = req.user.id;
+
+        const starredEmails = await prisma.starredEmail.findMany({
+            where: {
+                userId,
+            },
+            select: {
+                emailId: true,
+            },
+        });
+
+        res.status(200).json({
+            success: true,
+            data: starredEmails.map(email => email.emailId),
+        });
+    } catch (error) {
+        logger.error('Get starred email ids error:', error.message);
+        res.status(500).json({ error: error.message });
+    }
+};
+
 export const getEmailById = async (req, res) => {
     try {
         const { emailId } = req.params;

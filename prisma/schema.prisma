@@ -58,6 +58,7 @@ model User {
   assignedTasks   Task[]    @relation("AssignedTasks")
   createdTasks    Task[]    @relation("CreatedTasks")
   sentEmails    Email[] @relation("SentEmails")
+  starredEmails StarredEmail[]
   
   chatMembers     ChatMember[]
   messages        Message[]
@@ -91,6 +92,7 @@ model Email {
   updatedAt     DateTime @updatedAt
   
   recipients    EmailRecipient[]
+  starredBy    StarredEmail[]
   
   @@index([fromUserId])
   @@index([folder])
@@ -110,6 +112,23 @@ model EmailRecipient {
   
   @@index([emailId])
   @@index([recipientEmail])
+}
+
+model StarredEmail {
+  id        String   @id @default(cuid())
+
+  emailId   String
+  userId    String
+
+  email      Email @relation(fields: [emailId], references: [id], onDelete: Cascade)
+  user       User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@unique([emailId, userId])
+
+  @@index([userId])
+  @@index([emailId])
 }
 
 model Chat {
