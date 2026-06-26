@@ -84,6 +84,7 @@ model Email {
   isRead        Boolean  @default(false)
   isDraft       Boolean  @default(false)
   folder        String   @default("inbox") // inbox, sent, drafts, trash, spam
+  previousFolder String?
 
   isPromotion   Boolean  @default(false)
   isSpam        Boolean  @default(false)

@@ -28,6 +28,8 @@ router.get('/spam', emailController.getSpamEmails);
 // Get Starred emails
 router.get('/starred', emailController.getStarredEmails);
 
+router.get('/trash', emailController.getTrashEmails);
+
 //returns only the IDs of the starred emails of user
 router.get('/starred/ids', emailController.getStarredEmailIds);
 
@@ -42,5 +44,8 @@ router.post('/draft/save', emailController.saveDraft);
 
 // Delete email
 router.delete('/:emailId', emailController.deleteEmail);
+
+// move email to trash
+router.patch('/:emailId/trash', emailController.moveToTrash);
 
 export default router;
