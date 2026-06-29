@@ -97,6 +97,12 @@ export const sendEmail = async (req, res) => {
             },
         });
 
+        const createdEntries = await prisma.userEmail.findMany({
+            where: {
+                emailId: email.id,
+            },
+        });
+
         console.log('Created UserEmails:', email.userEmails);
 
         logger.info(`Email sent by ${userId} to ${to}`);
@@ -136,6 +142,8 @@ export const getInbox = async (req, res) => {
                 createdAt: 'desc',
             },
         });
+
+        console.log('Inbox UserEmails:', emails);
 
         res.status(200).json({
             success: true,
