@@ -97,6 +97,8 @@ export const sendEmail = async (req, res) => {
             },
         });
 
+        console.log('Created UserEmails:', email.userEmails);
+
         logger.info(`Email sent by ${userId} to ${to}`);
         res.status(201).json({ success: true, data: email });
     } catch (error) {
@@ -172,6 +174,8 @@ export const getSentEmails = async (req, res) => {
                 createdAt: 'desc',
             },
         });
+
+        console.log('Sent UserEmails:', emails);
 
         res.status(200).json({
             success: true,
