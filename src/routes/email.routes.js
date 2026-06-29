@@ -36,6 +36,8 @@ router.get('/starred/ids', emailController.getStarredEmailIds);
 // endpoint to star or unstar an email
 router.patch('/:emailId/star', emailController.toggleStarredEmail);
 
+router.get('/search', emailController.searchEmails);
+
 // Get single email
 router.get('/:emailId', emailController.getEmailById);
 

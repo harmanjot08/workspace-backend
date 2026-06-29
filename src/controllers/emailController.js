@@ -548,6 +548,164 @@ export const restoreEmail = async (req, res) => {
     }
 };
 
+export const searchEmails = async (req, res) => {
+    try {
+        const userId = req.user.id;
+        const search = req.query.q?.trim();
+
+        if (!search) {
+            return res.status(400).json({
+                message: 'Search query is required',
+            });
+        }
+
+        const emails = await prisma.email.findMany({
+            where: {
+                AND: [
+                    {
+                        OR: [
+                            {
+                                fromUserId: userId,
+                            },
+                            {
+                                recipients: {
+                                    some: {
+                                        recipientEmail: req.user.email,
+                                    },
+                                },
+                            },
+                        ],
+                    },
+                    {
+                        OR: [
+                            {
+                                subject: {
+                                    contains: search,
+                                    mode: 'insensitive',
+                                },
+                            },
+                            {
+                                body: {
+                                    contains: search,
+                                    mode: 'insensitive',
+                                },
+                            },
+                            {
+                                fromUser: {
+                                    name: {
+                                        contains: search,
+                                        mode: 'insensitive',
+                                    },
+                                },
+                            },
+                            {
+                                fromUser: {
+                                    email: {
+                                        contains: search,
+                                        mode: 'insensitive',
+                                    },
+                                },
+                            },
+                            {
+                                recipients: {
+                                    some: {
+                                        recipientEmail: {
+                                            contains: search,
+                                            mode: 'insensitive',
+                                        },
+                                    },
+                                },
+                            },
+                        ],
+                    },
+                ],
+            },
+
+            include: {
+                fromUser: {
+                    select: {
+                        id: true,
+                        name: true,
+                        email: true,
+                    },
+                },
+                recipients: true,
+            },
+
+            orderBy: {
+                createdAt: 'desc',
+            },
+        });
+
+        const groupedResults = {
+            inbox: [],
+            sent: [],
+            drafts: [],
+            promotions: [],
+            spam: [],
+            trash: [],
+        };
+
+        emails.forEach((email) => {
+
+            // Inbox
+            if (
+                !email.isDraft &&
+                email.folder === 'inbox' &&
+                !email.isSpam
+            ) {
+                groupedResults.inbox.push(email);
+            }
+
+            // Sent
+            if (
+                email.fromUserId === userId &&
+                email.folder === 'sent'
+            ) {
+                groupedResults.sent.push(email);
+            }
+
+            // Drafts
+            if (email.isDraft) {
+                groupedResults.drafts.push(email);
+            }
+
+            // Promotions
+            if (email.isPromotion) {
+                groupedResults.promotions.push(email);
+            }
+
+            // Spam
+            if (email.isSpam) {
+                groupedResults.spam.push(email);
+            }
+
+            // Trash
+            if (
+                email.fromUserId === userId &&
+                email.folder === 'trash'
+            ) {
+                groupedResults.trash.push(email);
+            }
+        });
+
+        const total = emails.length;
+
+        res.status(200).json({
+            success: true,
+            total,
+            results: groupedResults,
+        });
+
+    } catch (error) {
+        logger.error('Search email error:', error.message);
+
+        res.status(500).json({
+            error: error.message,
+        });
+    }
+};
+
 export const getTrashEmails = async (req, res) => {
     try {
         const userId = req.user.id;
