@@ -55,44 +55,6 @@ export const sendEmail = async (req, res) => {
             },
         });
 
-        const subjectLower = subject.toLowerCase();
-        const bodyLower = body.toLowerCase();
-
-        const promotionKeywords = [
-            'sale',
-            'discount',
-            'offer',
-            'limited time',
-            'buy now',
-            'coupon',
-            'free shipping',
-            'deal',
-        ];
-
-        const spamKeywords = [
-            'lottery',
-            'winner',
-            'claim prize',
-            'click here',
-            'urgent',
-            'bitcoin',
-            'crypto',
-            'investment',
-            'earn money',
-        ];
-
-        const isPromotion = promotionKeywords.some(
-            keyword =>
-                subjectLower.includes(keyword) ||
-                bodyLower.includes(keyword)
-        );
-
-        const isSpam = spamKeywords.some(
-            keyword =>
-                subjectLower.includes(keyword) ||
-                bodyLower.includes(keyword)
-        );
-
         // Create email
         const email = await prisma.email.create({
             data: {
