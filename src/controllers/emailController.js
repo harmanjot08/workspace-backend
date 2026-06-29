@@ -49,12 +49,6 @@ export const sendEmail = async (req, res) => {
             return res.status(400).json({ message: 'to, subject, body required' });
         }
 
-        const recipientUser = await prisma.user.findUnique({
-            where: {
-                email: to,
-            },
-        });
-
         // Create email
         const email = await prisma.email.create({
             data: {
@@ -71,39 +65,12 @@ export const sendEmail = async (req, res) => {
                         type: 'to',
                     },
                 },
-                userEmails: {
-                    create: [
-                        {
-                            userId,
-                            folder: 'sent',
-                        },
-                        ...(recipientUser
-                            ? [
-                                {
-                                    userId: recipientUser.id,
-                                    folder: 'inbox',
-                                    isSpam,
-                                    isPromotion,
-                                },
-                            ]
-                            : []),
-                    ],
-                },
             },
             include: {
                 recipients: true,
                 fromUser: { select: { id: true, name: true, email: true } },
-                userEmails: true,
             },
         });
-
-        const createdEntries = await prisma.userEmail.findMany({
-            where: {
-                emailId: email.id,
-            },
-        });
-
-        console.log('Created UserEmails:', email.userEmails);
 
         logger.info(`Email sent by ${userId} to ${to}`);
         res.status(201).json({ success: true, data: email });
@@ -117,37 +84,61 @@ export const getInbox = async (req, res) => {
     try {
         const userId = req.user.id;
 
-        const emails = await prisma.userEmail.findMany({
+        const emails = await prisma.email.findMany({
             where: {
-                userId,
-                folder: 'inbox',
                 isSpam: false,
-                isPromotion: false,
-            },
-            include: {
-                email: {
-                    include: {
-                        fromUser: {
-                            select: {
-                                id: true,
-                                name: true,
-                                email: true,
+
+                OR: [
+                    {
+                        fromUserId: userId,
+                        folder: 'inbox',
+                    },
+                    {
+                        recipients: {
+                            some: {
+                                recipientEmail: {
+                                    contains: req.user.email,
+                                },
                             },
                         },
-                        recipients: true,
+                    },
+                ],
+            },
+
+            include: {
+                fromUser: {
+                    select: {
+                        id: true,
+                        name: true,
+                        email: true,
+                    },
+                },
+
+                recipients: true,
+
+                starredBy: {
+                    where: {
+                        userId,
+                    },
+                    select: {
+                        id: true,
                     },
                 },
             },
+
             orderBy: {
                 createdAt: 'desc',
             },
         });
 
-        console.log('Inbox UserEmails:', emails);
+        const inboxEmails = emails.map(email => ({
+            ...email,
+            isStarred: email.starredBy.length > 0,
+        }));
 
         res.status(200).json({
             success: true,
-            data: emails.map(item => item.email),
+            data: inboxEmails,
         });
     } catch (error) {
         logger.error('Get inbox error:', error.message);
@@ -159,36 +150,19 @@ export const getSentEmails = async (req, res) => {
     try {
         const userId = req.user.id;
 
-        const emails = await prisma.userEmail.findMany({
+        const emails = await prisma.email.findMany({
             where: {
-                userId,
+                fromUserId: userId,
                 folder: 'sent',
             },
             include: {
-                email: {
-                    include: {
-                        fromUser: {
-                            select: {
-                                id: true,
-                                name: true,
-                                email: true,
-                            },
-                        },
-                        recipients: true,
-                    },
-                },
+                recipients: true,
+                fromUser: { select: { id: true, name: true, email: true } },
             },
-            orderBy: {
-                createdAt: 'desc',
-            },
+            orderBy: { createdAt: 'desc' },
         });
 
-        console.log('Sent UserEmails:', emails);
-
-        res.status(200).json({
-            success: true,
-            data: emails.map(item => item.email),
-        });
+        res.status(200).json({ success: true, data: emails });
     } catch (error) {
         logger.error('Get sent emails error:', error.message);
         res.status(500).json({ error: error.message });
