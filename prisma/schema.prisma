@@ -59,6 +59,7 @@ model User {
   createdTasks    Task[]    @relation("CreatedTasks")
   sentEmails    Email[] @relation("SentEmails")
   starredEmails StarredEmail[]
+  emailStates UserEmail[]
   
   chatMembers     ChatMember[]
   messages        Message[]
@@ -94,6 +95,7 @@ model Email {
   
   recipients    EmailRecipient[]
   starredBy    StarredEmail[]
+  userEmails UserEmail[]
   
   @@index([fromUserId])
   @@index([folder])
@@ -364,4 +366,30 @@ model PricingPlan {
   updatedAt       DateTime  @updatedAt
 
   @@map("pricing_plans")
+}
+
+model UserEmail {
+  id             String   @id @default(cuid())
+
+  emailId         String
+  userId          String
+
+  folder          String   @default("inbox")
+  previousFolder  String?
+
+  isRead          Boolean  @default(false)
+  isStarred       Boolean  @default(false)
+  isSpam          Boolean  @default(false)
+  isPromotion     Boolean  @default(false)
+
+  email           Email @relation(fields: [emailId], references: [id], onDelete: Cascade)
+  user            User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@unique([emailId, userId])
+
+  @@index([emailId])
+  @@index([userId])
 }

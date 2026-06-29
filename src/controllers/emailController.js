@@ -49,6 +49,50 @@ export const sendEmail = async (req, res) => {
             return res.status(400).json({ message: 'to, subject, body required' });
         }
 
+        const recipientUser = await prisma.user.findUnique({
+            where: {
+                email: to,
+            },
+        });
+
+        const subjectLower = subject.toLowerCase();
+        const bodyLower = body.toLowerCase();
+
+        const promotionKeywords = [
+            'sale',
+            'discount',
+            'offer',
+            'limited time',
+            'buy now',
+            'coupon',
+            'free shipping',
+            'deal',
+        ];
+
+        const spamKeywords = [
+            'lottery',
+            'winner',
+            'claim prize',
+            'click here',
+            'urgent',
+            'bitcoin',
+            'crypto',
+            'investment',
+            'earn money',
+        ];
+
+        const isPromotion = promotionKeywords.some(
+            keyword =>
+                subjectLower.includes(keyword) ||
+                bodyLower.includes(keyword)
+        );
+
+        const isSpam = spamKeywords.some(
+            keyword =>
+                subjectLower.includes(keyword) ||
+                bodyLower.includes(keyword)
+        );
+
         // Create email
         const email = await prisma.email.create({
             data: {
@@ -65,10 +109,29 @@ export const sendEmail = async (req, res) => {
                         type: 'to',
                     },
                 },
+                userEmails: {
+                    create: [
+                        {
+                            userId,
+                            folder: 'sent',
+                        },
+                        ...(recipientUser
+                            ? [
+                                {
+                                    userId: recipientUser.id,
+                                    folder: 'inbox',
+                                    isSpam,
+                                    isPromotion,
+                                },
+                            ]
+                            : []),
+                    ],
+                },
             },
             include: {
                 recipients: true,
                 fromUser: { select: { id: true, name: true, email: true } },
+                userEmails: true,
             },
         });
 
@@ -84,34 +147,36 @@ export const getInbox = async (req, res) => {
     try {
         const userId = req.user.id;
 
-        const emails = await prisma.email.findMany({
+        const emails = await prisma.userEmail.findMany({
             where: {
+                userId,
+                folder: 'inbox',
                 isSpam: false,
-
-                OR: [
-                    {
-                        fromUserId: userId,
-                        folder: 'inbox',
-                    },
-                    {
-                        recipients: {
-                            some: {
-                                recipientEmail: {
-                                    contains: req.user.email,
-                                },
-                            },
-                        },
-                    },
-                ],
+                isPromotion: false,
             },
             include: {
-                fromUser: { select: { id: true, name: true, email: true } },
-                recipients: true,
+                email: {
+                    include: {
+                        fromUser: {
+                            select: {
+                                id: true,
+                                name: true,
+                                email: true,
+                            },
+                        },
+                        recipients: true,
+                    },
+                },
             },
-            orderBy: { createdAt: 'desc' },
+            orderBy: {
+                createdAt: 'desc',
+            },
         });
 
-        res.status(200).json({ success: true, data: emails });
+        res.status(200).json({
+            success: true,
+            data: emails.map(item => item.email),
+        });
     } catch (error) {
         logger.error('Get inbox error:', error.message);
         res.status(500).json({ error: error.message });
@@ -122,19 +187,34 @@ export const getSentEmails = async (req, res) => {
     try {
         const userId = req.user.id;
 
-        const emails = await prisma.email.findMany({
+        const emails = await prisma.userEmail.findMany({
             where: {
-                fromUserId: userId,
+                userId,
                 folder: 'sent',
             },
             include: {
-                recipients: true,
-                fromUser: { select: { id: true, name: true, email: true } },
+                email: {
+                    include: {
+                        fromUser: {
+                            select: {
+                                id: true,
+                                name: true,
+                                email: true,
+                            },
+                        },
+                        recipients: true,
+                    },
+                },
             },
-            orderBy: { createdAt: 'desc' },
+            orderBy: {
+                createdAt: 'desc',
+            },
         });
 
-        res.status(200).json({ success: true, data: emails });
+        res.status(200).json({
+            success: true,
+            data: emails.map(item => item.email),
+        });
     } catch (error) {
         logger.error('Get sent emails error:', error.message);
         res.status(500).json({ error: error.message });
