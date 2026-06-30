@@ -770,8 +770,12 @@ export const getTrashEmails = async (req, res) => {
 
         const emails = await prisma.email.findMany({
             where: {
-                fromUserId: userId,
-                folder: 'trash',
+                userEmails: {
+                    some: {
+                        userId,
+                        folder: 'trash',
+                    },
+                },
             },
             include: {
                 fromUser: {
@@ -782,6 +786,12 @@ export const getTrashEmails = async (req, res) => {
                     },
                 },
                 recipients: true,
+
+                userEmails: {
+                    where: {
+                        userId,
+                    },
+                },
             },
             orderBy: {
                 createdAt: 'desc',
