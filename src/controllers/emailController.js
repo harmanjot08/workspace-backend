@@ -49,6 +49,12 @@ export const sendEmail = async (req, res) => {
             return res.status(400).json({ message: 'to, subject, body required' });
         }
 
+        const recipientUser = await prisma.user.findUnique({
+            where: {
+                email: to,
+            },
+        });
+
         // Create email
         const email = await prisma.email.create({
             data: {
@@ -62,6 +68,7 @@ export const sendEmail = async (req, res) => {
                 recipients: {
                     create: {
                         recipientEmail: to,
+                        recipientUserId: recipientUser?.id,
                         type: 'to',
                     },
                 },
@@ -69,6 +76,18 @@ export const sendEmail = async (req, res) => {
             include: {
                 recipients: true,
                 fromUser: { select: { id: true, name: true, email: true } },
+            },
+        });
+
+        // Create sender's email state
+        await prisma.userEmail.create({
+            data: {
+                emailId: email.id,
+                userId,
+                folder: 'sent',
+                isRead: true,
+                isSpam,
+                isPromotion,
             },
         });
 
