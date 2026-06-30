@@ -560,18 +560,24 @@ export const restoreEmail = async (req, res) => {
             });
         }
 
-        if (email.fromUserId !== userId) {
-            return res.status(403).json({
-                message: 'Not authorized',
-            });
-        }
-
-        await prisma.email.update({
+        const userEmail = await prisma.userEmail.findUnique({
             where: {
-                id: emailId,
+                emailId_userId: {
+                    emailId,
+                    userId,
+                },
+            },
+        });
+
+        await prisma.userEmail.update({
+            where: {
+                emailId_userId: {
+                    emailId,
+                    userId,
+                },
             },
             data: {
-                folder: email.previousFolder,
+                folder: userEmail.previousFolder,
                 previousFolder: null,
             },
         });
