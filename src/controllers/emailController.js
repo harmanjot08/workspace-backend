@@ -516,15 +516,12 @@ export const moveToTrash = async (req, res) => {
             });
         }
 
-        if (email.fromUserId !== userId) {
-            return res.status(403).json({
-                message: 'Not authorized',
-            });
-        }
-
-        await prisma.email.update({
+        await prisma.userEmail.update({
             where: {
-                id: emailId,
+                emailId_userId: {
+                    emailId,
+                    userId,
+                },
             },
             data: {
                 previousFolder: email.folder,
