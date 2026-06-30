@@ -91,6 +91,20 @@ export const sendEmail = async (req, res) => {
             },
         });
 
+        // Create recipient's email state
+        if (recipientUser) {
+            await prisma.userEmail.create({
+                data: {
+                    emailId: email.id,
+                    userId: recipientUser.id,
+                    folder: 'inbox',
+                    isRead: false,
+                    isSpam,
+                    isPromotion,
+                },
+            });
+        }
+
         logger.info(`Email sent by ${userId} to ${to}`);
         res.status(201).json({ success: true, data: email });
     } catch (error) {
@@ -171,12 +185,28 @@ export const getSentEmails = async (req, res) => {
 
         const emails = await prisma.email.findMany({
             where: {
-                fromUserId: userId,
-                folder: 'sent',
+                userEmails: {
+                    some: {
+                        userId,
+                        folder: 'sent',
+                    },
+                },
             },
             include: {
                 recipients: true,
-                fromUser: { select: { id: true, name: true, email: true } },
+                fromUser: {
+                    select: {
+                        id: true,
+                        name: true,
+                        email: true
+                    }
+                },
+
+                userEmails: {
+                    where: {
+                        userId,
+                    },
+                },
             },
             orderBy: { createdAt: 'desc' },
         });
