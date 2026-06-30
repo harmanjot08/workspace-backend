@@ -121,21 +121,12 @@ export const getInbox = async (req, res) => {
             where: {
                 isSpam: false,
 
-                OR: [
-                    {
-                        fromUserId: userId,
+                userEmails: {
+                    some: {
+                        userId,
                         folder: 'inbox',
                     },
-                    {
-                        recipients: {
-                            some: {
-                                recipientEmail: {
-                                    contains: req.user.email,
-                                },
-                            },
-                        },
-                    },
-                ],
+                },
             },
 
             include: {
@@ -148,6 +139,12 @@ export const getInbox = async (req, res) => {
                 },
 
                 recipients: true,
+
+                userEmails: {
+                    where: {
+                        userId,
+                    },
+                },
 
                 starredBy: {
                     where: {
