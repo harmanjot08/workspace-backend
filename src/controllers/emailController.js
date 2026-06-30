@@ -630,6 +630,12 @@ export const searchEmails = async (req, res) => {
                     },
                 },
                 recipients: true,
+
+                starredBy: {
+                    where: {
+                        userId,
+                    },
+                },
             },
 
             orderBy: {
@@ -643,6 +649,7 @@ export const searchEmails = async (req, res) => {
             drafts: [],
             promotions: [],
             spam: [],
+            starred: [],
             trash: [],
         };
 
@@ -678,6 +685,11 @@ export const searchEmails = async (req, res) => {
             // Spam
             if (email.isSpam) {
                 groupedResults.spam.push(email);
+            }
+
+            // Starred
+            if (email.starredBy.length > 0) {
+                groupedResults.starred.push(email);
             }
 
             // Trash
