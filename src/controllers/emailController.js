@@ -710,14 +710,7 @@ export const searchEmails = async (req, res) => {
             },
         });
 
-        console.log(
-            emails.map(email => ({
-                subject: email.subject,
-                folder: email.userEmails[0]?.folder,
-                isSpam: email.userEmails[0]?.isSpam,
-                isStarred: email.starredBy.length > 0,
-            }))
-        );
+        console.log("Total emails:", emails.length);
 
         const groupedResults = {
             inbox: [],
