@@ -516,6 +516,15 @@ export const moveToTrash = async (req, res) => {
             });
         }
 
+        const userEmail = await prisma.userEmail.findUnique({
+            where: {
+                emailId_userId: {
+                    emailId,
+                    userId,
+                },
+            },
+        });
+
         await prisma.userEmail.update({
             where: {
                 emailId_userId: {
@@ -524,7 +533,7 @@ export const moveToTrash = async (req, res) => {
                 },
             },
             data: {
-                previousFolder: email.folder,
+                previousFolder: userEmail.folder,
                 folder: 'trash',
             },
         });
