@@ -119,12 +119,11 @@ export const getInbox = async (req, res) => {
 
         const emails = await prisma.email.findMany({
             where: {
-                isSpam: false,
-
                 userEmails: {
                     some: {
                         userId,
                         folder: 'inbox',
+                        isSpam: false,
                     },
                 },
             },
@@ -145,15 +144,6 @@ export const getInbox = async (req, res) => {
                         userId,
                     },
                 },
-
-                starredBy: {
-                    where: {
-                        userId,
-                    },
-                    select: {
-                        id: true,
-                    },
-                },
             },
 
             orderBy: {
@@ -163,7 +153,7 @@ export const getInbox = async (req, res) => {
 
         const inboxEmails = emails.map(email => ({
             ...email,
-            isStarred: email.starredBy.length > 0,
+            isStarred: email.userEmails[0]?.isStarred ?? false,
         }));
 
         res.status(200).json({
@@ -208,7 +198,12 @@ export const getSentEmails = async (req, res) => {
             orderBy: { createdAt: 'desc' },
         });
 
-        res.status(200).json({ success: true, data: emails });
+        const sentEmails = emails.map(email => ({
+            ...email,
+            isStarred: email.userEmails[0]?.isStarred ?? false,
+        }));
+
+        res.status(200).json({ success: true, data: sentEmails });
     } catch (error) {
         logger.error('Get sent emails error:', error.message);
         res.status(500).json({ error: error.message });
@@ -221,16 +216,35 @@ export const getDrafts = async (req, res) => {
 
         const emails = await prisma.email.findMany({
             where: {
-                fromUserId: userId,
                 isDraft: true,
+                userEmails: {
+                    some: {
+                        userId,
+                        folder: 'drafts',
+                    },
+                },
             },
             include: {
                 recipients: true,
+
+                userEmails: {
+                    where: {
+                        userId,
+                    },
+                },
             },
             orderBy: { createdAt: 'desc' },
         });
 
-        res.status(200).json({ success: true, data: emails });
+        const draftEmails = emails.map(email => ({
+            ...email,
+            isStarred: email.userEmails[0]?.isStarred ?? false,
+        }));
+
+        res.status(200).json({
+            success: true,
+            data: draftEmails,
+        });
     } catch (error) {
         logger.error('Get drafts error:', error.message);
         res.status(500).json({ error: error.message });
@@ -243,19 +257,12 @@ export const getPromotionEmails = async (req, res) => {
 
         const emails = await prisma.email.findMany({
             where: {
-                isPromotion: true,
-                OR: [
-                    { fromUserId: userId },
-                    {
-                        recipients: {
-                            some: {
-                                recipientEmail: {
-                                    contains: req.user.email,
-                                },
-                            },
-                        },
+                userEmails: {
+                    some: {
+                        userId,
+                        isPromotion: true,
                     },
-                ],
+                },
             },
             include: {
                 fromUser: {
@@ -265,16 +272,28 @@ export const getPromotionEmails = async (req, res) => {
                         email: true,
                     },
                 },
+
                 recipients: true,
+
+                userEmails: {
+                    where: {
+                        userId,
+                    },
+                },
             },
             orderBy: {
                 createdAt: 'desc',
             },
         });
 
+        const promotionEmails = emails.map(email => ({
+            ...email,
+            isStarred: email.userEmails[0]?.isStarred ?? false,
+        }));
+
         res.status(200).json({
             success: true,
-            data: emails,
+            data: promotionEmails,
         });
     } catch (error) {
         logger.error('Get promotion emails error:', error.message);
@@ -291,19 +310,12 @@ export const getSpamEmails = async (req, res) => {
 
         const emails = await prisma.email.findMany({
             where: {
-                isSpam: true,
-                OR: [
-                    { fromUserId: userId },
-                    {
-                        recipients: {
-                            some: {
-                                recipientEmail: {
-                                    contains: req.user.email,
-                                },
-                            },
-                        },
+                userEmails: {
+                    some: {
+                        userId,
+                        isSpam: true,
                     },
-                ],
+                },
             },
             include: {
                 fromUser: {
@@ -313,16 +325,28 @@ export const getSpamEmails = async (req, res) => {
                         email: true,
                     },
                 },
+
                 recipients: true,
+
+                userEmails: {
+                    where: {
+                        userId,
+                    },
+                },
             },
             orderBy: {
                 createdAt: 'desc',
             },
         });
 
+        const spamEmails = emails.map(email => ({
+            ...email,
+            isStarred: email.userEmails[0]?.isStarred ?? false,
+        }));
+
         res.status(200).json({
             success: true,
-            data: emails,
+            data: spamEmails,
         });
     } catch (error) {
         logger.error('Get spam emails error:', error.message);
@@ -346,6 +370,12 @@ export const toggleStarredEmail = async (req, res) => {
                 },
             },
         });
+
+        if (!userEmail) {
+            return res.status(404).json({
+                message: 'Email not found',
+            });
+        }
 
         await prisma.userEmail.update({
             where: {
@@ -373,9 +403,10 @@ export const getStarredEmails = async (req, res) => {
     try {
         const userId = req.user.id;
 
-        const starredEmails = await prisma.starredEmail.findMany({
+        const starredEmails = await prisma.userEmail.findMany({
             where: {
                 userId,
+                isStarred: true,
             },
             include: {
                 email: {
@@ -392,11 +423,14 @@ export const getStarredEmails = async (req, res) => {
                 },
             },
             orderBy: {
-                createdAt: 'desc',
+                updatedAt: 'desc',
             },
         });
 
-        const emails = starredEmails.map((item) => item.email);
+        const emails = starredEmails.map(item => ({
+            ...item.email,
+            isStarred: true,
+        }));
 
         res.status(200).json({
             success: true,
@@ -500,6 +534,12 @@ export const moveToTrash = async (req, res) => {
             },
         });
 
+        if (!userEmail) {
+            return res.status(404).json({
+                message: 'Email not found',
+            });
+        }
+
         if (!email) {
             return res.status(404).json({
                 message: 'Email not found',
@@ -552,6 +592,12 @@ export const restoreEmail = async (req, res) => {
                 id: emailId,
             },
         });
+
+        if (!userEmail) {
+            return res.status(404).json({
+                message: 'Email not found',
+            });
+        }
 
         if (!email) {
             return res.status(404).json({
@@ -680,12 +726,6 @@ export const searchEmails = async (req, res) => {
                         userId,
                     },
                 },
-
-                starredBy: {
-                    where: {
-                        userId,
-                    },
-                },
             },
 
             orderBy: {
@@ -711,43 +751,48 @@ export const searchEmails = async (req, res) => {
 
             if (!userEmail) return;
 
+            const emailWithFlags = {
+                ...email,
+                isStarred: userEmail.isStarred,
+            };
+
             // Inbox
             if (
                 !email.isDraft &&
                 userEmail.folder === 'inbox' &&
                 !userEmail.isSpam
             ) {
-                groupedResults.inbox.push(email);
+                groupedResults.inbox.push(emailWithFlags);
             }
 
             // Sent
             if (userEmail.folder === 'sent') {
-                groupedResults.sent.push(email);
+                groupedResults.sent.push(emailWithFlags);
             }
 
             // Drafts
             if (email.isDraft && userEmail.folder === 'drafts') {
-                groupedResults.drafts.push(email);
+                groupedResults.drafts.push(emailWithFlags);
             }
 
             // Promotions
             if (userEmail.isPromotion) {
-                groupedResults.promotions.push(email);
+                groupedResults.promotions.push(emailWithFlags);
             }
 
             // Spam
             if (userEmail.isSpam) {
-                groupedResults.spam.push(email);
+                groupedResults.spam.push(emailWithFlags);
             }
 
             // Starred
-            if (email.starredBy.length > 0) {
-                groupedResults.starred.push(email);
+            if (userEmail.isStarred) {
+                groupedResults.starred.push(emailWithFlags);
             }
 
             // Trash
             if (userEmail.folder === 'trash') {
-                groupedResults.trash.push(email);
+                groupedResults.trash.push(emailWithFlags);
             }
 
         });
@@ -803,9 +848,14 @@ export const getTrashEmails = async (req, res) => {
             },
         });
 
+        const trashEmails = emails.map(email => ({
+            ...email,
+            isStarred: email.userEmails[0]?.isStarred ?? false,
+        }));
+
         res.status(200).json({
             success: true,
-            data: emails,
+            data: trashEmails,
         });
     } catch (error) {
         logger.error('Get trash emails error:', error.message);
