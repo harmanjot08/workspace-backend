@@ -189,8 +189,8 @@ export const sendEmail = async (req, res) => {
                 isRead: true,
                 isSpam,
                 isPromotion,
-                isImportant,
-                importanceScore,
+                isImportant: false,
+                importanceScore: 0,
             },
         });
 
