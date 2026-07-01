@@ -338,7 +338,7 @@ export const toggleStarredEmail = async (req, res) => {
         const { emailId } = req.params;
         const userId = req.user.id;
 
-        const existingStar = await prisma.starredEmail.findUnique({
+        const userEmail = await prisma.userEmail.findUnique({
             where: {
                 emailId_userId: {
                     emailId,
@@ -347,32 +347,21 @@ export const toggleStarredEmail = async (req, res) => {
             },
         });
 
-        if (existingStar) {
-            await prisma.starredEmail.delete({
-                where: {
-                    emailId_userId: {
-                        emailId,
-                        userId,
-                    },
+        await prisma.userEmail.update({
+            where: {
+                emailId_userId: {
+                    emailId,
+                    userId,
                 },
-            });
-
-            return res.status(200).json({
-                success: true,
-                starred: false,
-            });
-        }
-
-        await prisma.starredEmail.create({
+            },
             data: {
-                emailId,
-                userId,
+                isStarred: !userEmail.isStarred,
             },
         });
 
         res.status(200).json({
             success: true,
-            starred: true,
+            starred: !userEmail.isStarred,
         });
     } catch (error) {
         logger.error('Toggle starred email error:', error.message);
@@ -423,9 +412,10 @@ export const getStarredEmailIds = async (req, res) => {
     try {
         const userId = req.user.id;
 
-        const starredEmails = await prisma.starredEmail.findMany({
+        const starredEmails = await prisma.userEmail.findMany({
             where: {
                 userId,
+                isStarred: true,
             },
             select: {
                 emailId: true,
