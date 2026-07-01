@@ -862,6 +862,12 @@ export const saveDraft = async (req, res) => {
                     subject,
                     body,
                     isDraft: true,
+                    userEmails: {
+                        create: {
+                            userId,
+                            folder: 'drafts',
+                        },
+                    },
                     recipients: {
                         create: {
                             recipientEmail: to,
