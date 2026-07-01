@@ -763,119 +763,121 @@ export const searchEmails = async (req, res) => {
                 groupedResults.trash.push(email);
             }
 
-            const total = emails.length;
+        });
 
-            res.status(200).json({
-                success: true,
-                total,
-                results: groupedResults,
-            });
+        const total = emails.length;
 
-        } catch (error) {
-            logger.error('Search email error:', error.message);
+        res.status(200).json({
+            success: true,
+            total,
+            results: groupedResults,
+        });
 
-            res.status(500).json({
-                error: error.message,
-            });
-        }
-    };
+    } catch (error) {
+        logger.error('Search email error:', error.message);
 
-    export const getTrashEmails = async (req, res) => {
-        try {
-            const userId = req.user.id;
+        res.status(500).json({
+            error: error.message,
+        });
+    }
+};
 
-            const emails = await prisma.email.findMany({
-                where: {
-                    userEmails: {
-                        some: {
-                            userId,
-                            folder: 'trash',
+export const getTrashEmails = async (req, res) => {
+    try {
+        const userId = req.user.id;
+
+        const emails = await prisma.email.findMany({
+            where: {
+                userEmails: {
+                    some: {
+                        userId,
+                        folder: 'trash',
+                    },
+                },
+            },
+            include: {
+                fromUser: {
+                    select: {
+                        id: true,
+                        name: true,
+                        email: true,
+                    },
+                },
+                recipients: true,
+
+                userEmails: {
+                    where: {
+                        userId,
+                    },
+                },
+            },
+            orderBy: {
+                createdAt: 'desc',
+            },
+        });
+
+        res.status(200).json({
+            success: true,
+            data: emails,
+        });
+    } catch (error) {
+        logger.error('Get trash emails error:', error.message);
+        res.status(500).json({
+            error: error.message,
+        });
+    }
+};
+
+export const saveDraft = async (req, res) => {
+    try {
+        const { to, subject, body, draftId } = req.body;
+        const userId = req.user.id;
+
+        if (draftId) {
+            // Update existing draft
+            const email = await prisma.email.update({
+                where: { id: draftId },
+                data: {
+                    subject,
+                    body,
+                    recipients: {
+                        deleteMany: {},
+                        create: {
+                            recipientEmail: to,
+                            type: 'to',
                         },
                     },
                 },
                 include: {
-                    fromUser: {
-                        select: {
-                            id: true,
-                            name: true,
-                            email: true,
-                        },
-                    },
                     recipients: true,
-
-                    userEmails: {
-                        where: {
-                            userId,
-                        },
-                    },
-                },
-                orderBy: {
-                    createdAt: 'desc',
                 },
             });
 
-            res.status(200).json({
-                success: true,
-                data: emails,
-            });
-        } catch (error) {
-            logger.error('Get trash emails error:', error.message);
-            res.status(500).json({
-                error: error.message,
-            });
-        }
-    };
-
-    export const saveDraft = async (req, res) => {
-        try {
-            const { to, subject, body, draftId } = req.body;
-            const userId = req.user.id;
-
-            if (draftId) {
-                // Update existing draft
-                const email = await prisma.email.update({
-                    where: { id: draftId },
-                    data: {
-                        subject,
-                        body,
-                        recipients: {
-                            deleteMany: {},
-                            create: {
-                                recipientEmail: to,
-                                type: 'to',
-                            },
+            res.status(200).json({ success: true, data: email });
+        } else {
+            // Create new draft
+            const email = await prisma.email.create({
+                data: {
+                    fromUserId: userId,
+                    subject,
+                    body,
+                    isDraft: true,
+                    recipients: {
+                        create: {
+                            recipientEmail: to,
+                            type: 'to',
                         },
                     },
-                    include: {
-                        recipients: true,
-                    },
-                });
+                },
+                include: {
+                    recipients: true,
+                },
+            });
 
-                res.status(200).json({ success: true, data: email });
-            } else {
-                // Create new draft
-                const email = await prisma.email.create({
-                    data: {
-                        fromUserId: userId,
-                        subject,
-                        body,
-                        isDraft: true,
-                        recipients: {
-                            create: {
-                                recipientEmail: to,
-                                type: 'to',
-                            },
-                        },
-                    },
-                    include: {
-                        recipients: true,
-                    },
-                });
-
-                res.status(201).json({ success: true, data: email });
-            }
-        } catch (error) {
-            logger.error('Save draft error:', error.message);
-            res.status(500).json({ error: error.message });
+            res.status(201).json({ success: true, data: email });
         }
-    };
+    } catch (error) {
+        logger.error('Save draft error:', error.message);
+        res.status(500).json({ error: error.message });
+    }
+};
