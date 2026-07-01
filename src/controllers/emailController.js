@@ -607,6 +607,8 @@ export const restoreEmail = async (req, res) => {
 };
 
 export const searchEmails = async (req, res) => {
+    console.log("searchEmails endpoint hit");
+
     try {
         const userId = req.user.id;
         const search = req.query.q?.trim();
