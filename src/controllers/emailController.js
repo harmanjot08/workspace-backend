@@ -18,6 +18,62 @@ export const sendEmail = async (req, res) => {
 
         const emailContent = `${subject} ${body}`.toLowerCase();
 
+        const importantSubjectKeywords = [
+            'urgent',
+            'important',
+            'asap',
+            'deadline',
+            'meeting',
+            'interview',
+            'offer letter',
+            'appointment',
+            'invoice',
+            'payment due',
+            'verification',
+            'security alert',
+            'action required',
+            'response required',
+        ];
+
+        const importantBodyKeywords = [
+            'please respond',
+            'kindly respond',
+            'action required',
+            'reply required',
+            'confirm',
+            'verify',
+            'approval',
+            'submit',
+            'complete before',
+            'due date',
+            'deadline',
+        ];
+
+        let importanceScore = 0;
+
+        // Subject keyword score
+        if (
+            importantSubjectKeywords.some(keyword =>
+                subject.toLowerCase().includes(keyword)
+            )
+        ) {
+            importanceScore += 40;
+        }
+
+        // Body keyword score
+        if (
+            importantBodyKeywords.some(keyword =>
+                body.toLowerCase().includes(keyword)
+            )
+        ) {
+            importanceScore += 20;
+        }
+
+        // Single recipient score
+        if (!to.includes(',')) {
+            importanceScore += 10;
+        }
+
         const isPromotion = promotionKeywords.some(keyword =>
             emailContent.includes(keyword)
         );
@@ -37,6 +93,51 @@ export const sendEmail = async (req, res) => {
 
         const isSpam = spamKeywords.some(keyword =>
             emailContent.includes(keyword)
+        );
+
+        // Promotion penalty
+        if (isPromotion) {
+            importanceScore -= 60;
+        }
+
+        // Spam penalty
+        if (isSpam) {
+            importanceScore -= 100;
+        }
+
+        // Marketing keyword penalty
+        const marketingKeywords = [
+            'sale',
+            'discount',
+            'offer',
+            'coupon',
+            'buy now',
+            'limited offer',
+            'deal',
+            'save big',
+            'free shipping',
+        ];
+
+        if (
+            marketingKeywords.some(keyword =>
+                subject.toLowerCase().includes(keyword)
+            )
+        ) {
+            importanceScore -= 30;
+        }
+
+        // ALL CAPS subject bonus
+        if (
+            subject === subject.toUpperCase() &&
+            /[A-Z]/.test(subject)
+        ) {
+            importanceScore += 5;
+        }
+
+        const isImportant = importanceScore >= 50;
+
+        logger.info(
+            `Importance Score: ${importanceScore}, Important: ${isImportant}`
         );
 
         console.log('isSpam:', isSpam);
@@ -88,6 +189,8 @@ export const sendEmail = async (req, res) => {
                 isRead: true,
                 isSpam,
                 isPromotion,
+                isImportant,
+                importanceScore,
             },
         });
 
@@ -101,6 +204,8 @@ export const sendEmail = async (req, res) => {
                     isRead: false,
                     isSpam,
                     isPromotion,
+                    isImportant,
+                    importanceScore,
                 },
             });
         }
@@ -124,6 +229,7 @@ export const getInbox = async (req, res) => {
                         userId,
                         folder: 'inbox',
                         isSpam: false,
+                        isPromotion: false,
                     },
                 },
             },
@@ -442,6 +548,64 @@ export const getStarredEmails = async (req, res) => {
     }
 };
 
+export const getImportantEmails = async (req, res) => {
+    try {
+        const userId = req.user.id;
+
+        const emails = await prisma.email.findMany({
+            where: {
+                userEmails: {
+                    some: {
+                        userId,
+                        isImportant: true,
+                    },
+                },
+            },
+            include: {
+                fromUser: {
+                    select: {
+                        id: true,
+                        name: true,
+                        email: true,
+                    },
+                },
+                recipients: true,
+                userEmails: {
+                    where: {
+                        userId,
+                    },
+                },
+            },
+            orderBy: {
+                createdAt: 'desc',
+            },
+        });
+
+        emails.sort(
+            (a, b) =>
+                (b.userEmails[0]?.importanceScore ?? 0) -
+                (a.userEmails[0]?.importanceScore ?? 0)
+        );
+
+        const importantEmails = emails.map(email => ({
+            ...email,
+            isStarred: email.userEmails[0]?.isStarred ?? false,
+            isImportant: email.userEmails[0]?.isImportant ?? false,
+            importanceScore: email.userEmails[0]?.importanceScore ?? 0,
+        }));
+
+        res.status(200).json({
+            success: true,
+            data: importantEmails,
+        });
+    } catch (error) {
+        logger.error('Get important emails error:', error.message);
+        res.status(500).json({
+            error: error.message,
+        });
+    }
+};
+
 export const getStarredEmailIds = async (req, res) => {
     try {
         const userId = req.user.id;
@@ -485,9 +649,16 @@ export const getEmailById = async (req, res) => {
 
         // Mark as read
         if (email.fromUserId !== userId) {
-            await prisma.email.update({
-                where: { id: emailId },
-                data: { isRead: true },
+            await prisma.userEmail.update({
+                where: {
+                    emailId_userId: {
+                        emailId,
+                        userId,
+                    },
+                },
+                data: {
+                    isRead: true,
+                },
             });
         }
 
@@ -741,6 +912,7 @@ export const searchEmails = async (req, res) => {
             drafts: [],
             promotions: [],
             spam: [],
+            important: [],
             starred: [],
             trash: [],
         };
@@ -754,6 +926,8 @@ export const searchEmails = async (req, res) => {
             const emailWithFlags = {
                 ...email,
                 isStarred: userEmail.isStarred,
+                isImportant: userEmail.isImportant,
+                importanceScore: userEmail.importanceScore,
             };
 
             // Inbox
@@ -783,6 +957,11 @@ export const searchEmails = async (req, res) => {
             // Spam
             if (userEmail.isSpam) {
                 groupedResults.spam.push(emailWithFlags);
+            }
+
+            // Important
+            if (userEmail.isImportant) {
+                groupedResults.important.push(emailWithFlags);
             }
 
             // Starred

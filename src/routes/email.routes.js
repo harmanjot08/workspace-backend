@@ -28,6 +28,8 @@ router.get('/spam', emailController.getSpamEmails);
 // Get Starred emails
 router.get('/starred', emailController.getStarredEmails);
 
+router.get('/important', emailController.getImportantEmails);
+
 router.get('/trash', emailController.getTrashEmails);
 
 //returns only the IDs of the starred emails of user

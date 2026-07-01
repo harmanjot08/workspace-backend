@@ -379,6 +379,8 @@ model UserEmail {
 
   isRead          Boolean  @default(false)
   isStarred       Boolean  @default(false)
+  isImportant     Boolean @default(false)
+  importanceScore Int     @default(0)
   isSpam          Boolean  @default(false)
   isPromotion     Boolean  @default(false)
 
