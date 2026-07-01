@@ -623,18 +623,11 @@ export const searchEmails = async (req, res) => {
             where: {
                 AND: [
                     {
-                        OR: [
-                            {
-                                fromUserId: userId,
+                        userEmails: {
+                            some: {
+                                userId,
                             },
-                            {
-                                recipients: {
-                                    some: {
-                                        recipientEmail: req.user.email,
-                                    },
-                                },
-                            },
-                        ],
+                        },
                     },
                     {
                         OR: [
