@@ -555,7 +555,16 @@ export const deleteEmail = async (req, res) => {
         const { emailId } = req.params;
         const userId = req.user.id;
 
-        const email = await prisma.email.findUnique({ where: { id: emailId } });
+        console.log("Delete emailId:", emailId);
+        console.log("Current userId:", userId);
+
+        const email = await prisma.email.findUnique({
+            where: {
+                id: emailId,
+            },
+        });
+
+        console.log("Email found:", email);
 
         if (!email) {
             return res.status(404).json({ message: 'Email not found' });
@@ -953,6 +962,7 @@ export const saveDraft = async (req, res) => {
                         create: {
                             userId,
                             folder: 'drafts',
+                            isRead: true,
                         },
                     },
                     recipients: {
