@@ -570,11 +570,43 @@ export const deleteEmail = async (req, res) => {
             return res.status(404).json({ message: 'Email not found' });
         }
 
-        if (email.fromUserId !== userId) {
-            return res.status(403).json({ message: 'Not authorized' });
+        const userEmail = await prisma.userEmail.findUnique({
+            where: {
+                emailId_userId: {
+                    emailId,
+                    userId,
+                },
+            },
+        });
+
+        if (!userEmail) {
+            return res.status(403).json({
+                message: 'Not authorized',
+            });
         }
 
-        await prisma.email.delete({ where: { id: emailId } });
+        await prisma.userEmail.delete({
+            where: {
+                emailId_userId: {
+                    emailId,
+                    userId,
+                },
+            },
+        });
+
+        const remainingCopies = await prisma.userEmail.count({
+            where: {
+                emailId,
+            },
+        });
+
+        if (remainingCopies === 0) {
+            await prisma.email.delete({
+                where: {
+                    id: emailId,
+                },
+            });
+        }
 
         logger.info(`Email ${emailId} deleted by ${userId}`);
         res.status(200).json({ success: true, message: 'Email deleted' });
