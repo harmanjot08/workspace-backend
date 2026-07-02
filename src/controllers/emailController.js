@@ -1,153 +1,48 @@
 import prisma from '../config/database.config.js';
 import { logger } from '../utils/logger.js';
+import { deliverEmail } from '../services/internalEmailService.js';
 
 export const sendEmail = async (req, res) => {
     try {
         const { to, subject, body } = req.body;
-        const promotionKeywords = [
-            'offer',
-            'sale',
-            'discount',
-            'coupon',
-            'newsletter',
-            'promotion',
-            'deal',
-            'limited time',
-            'special offer',
-        ];
-
-        const emailContent = `${subject} ${body}`.toLowerCase();
-
-        const importantSubjectKeywords = [
-            'urgent',
-            'important',
-            'asap',
-            'deadline',
-            'meeting',
-            'interview',
-            'offer letter',
-            'appointment',
-            'invoice',
-            'payment due',
-            'verification',
-            'security alert',
-            'action required',
-            'response required',
-        ];
-
-        const importantBodyKeywords = [
-            'please respond',
-            'kindly respond',
-            'action required',
-            'reply required',
-            'confirm',
-            'verify',
-            'approval',
-            'submit',
-            'complete before',
-            'due date',
-            'deadline',
-        ];
-
-        let importanceScore = 0;
-
-        // Subject keyword score
-        if (
-            importantSubjectKeywords.some(keyword =>
-                subject.toLowerCase().includes(keyword)
-            )
-        ) {
-            importanceScore += 40;
-        }
-
-        // Body keyword score
-        if (
-            importantBodyKeywords.some(keyword =>
-                body.toLowerCase().includes(keyword)
-            )
-        ) {
-            importanceScore += 20;
-        }
-
-        // Single recipient score
-        if (!to.includes(',')) {
-            importanceScore += 10;
-        }
-
-        const isPromotion = promotionKeywords.some(keyword =>
-            emailContent.includes(keyword)
-        );
-
-        const spamKeywords = [
-            'win money',
-            'lottery',
-            'free crypto',
-            'free bitcoin',
-            'claim prize',
-            'congratulations you won',
-            'earn money fast',
-            'click here urgently',
-            'guaranteed income',
-            'double your money',
-        ];
-
-        const isSpam = spamKeywords.some(keyword =>
-            emailContent.includes(keyword)
-        );
-
-        // Promotion penalty
-        if (isPromotion) {
-            importanceScore -= 60;
-        }
-
-        // Spam penalty
-        if (isSpam) {
-            importanceScore -= 100;
-        }
-
-        // Marketing keyword penalty
-        const marketingKeywords = [
-            'sale',
-            'discount',
-            'offer',
-            'coupon',
-            'buy now',
-            'limited offer',
-            'deal',
-            'save big',
-            'free shipping',
-        ];
-
-        if (
-            marketingKeywords.some(keyword =>
-                subject.toLowerCase().includes(keyword)
-            )
-        ) {
-            importanceScore -= 30;
-        }
-
-        // ALL CAPS subject bonus
-        if (
-            subject === subject.toUpperCase() &&
-            /[A-Z]/.test(subject)
-        ) {
-            importanceScore += 5;
-        }
-
-        const isImportant = importanceScore >= 50;
-
-        logger.info(
-            `Importance Score: ${importanceScore}, Important: ${isImportant}`
-        );
-
-        console.log('isSpam:', isSpam);
-        console.log('subject:', subject);
 
         const userId = req.user.id;
 
-        // Validate
         if (!to || !subject || !body) {
-            return res.status(400).json({ message: 'to, subject, body required' });
+            return res.status(400).json({
+                message: 'to, subject, body required',
+            });
+        }
+
+        const email = await deliverEmail({
+            userId,
+            to,
+            subject,
+            body,
+        });
+
+        res.status(201).json({
+            success: true,
+            data: email,
+        });
+    } catch (error) {
+        logger.error('Send email error:', error.message);
+
+        res.status(500).json({
+            error: error.message,
+        });
+    }
+};
+
+export const scheduleEmail = async (req, res) => {
+    try {
+        const { to, subject, body, scheduledFor } = req.body;
+        const userId = req.user.id;
+
+        if (!to || !subject || !body || !scheduledFor) {
+            return res.status(400).json({
+                message: 'to, subject, body and scheduledFor are required',
+            });
         }
 
         const recipientUser = await prisma.user.findUnique({
@@ -156,16 +51,12 @@ export const sendEmail = async (req, res) => {
             },
         });
 
-        // Create email
         const email = await prisma.email.create({
             data: {
                 fromUserId: userId,
                 subject,
                 body,
                 isDraft: false,
-                folder: 'sent',
-                isPromotion,
-                isSpam,
                 recipients: {
                     create: {
                         recipientEmail: to,
@@ -174,47 +65,32 @@ export const sendEmail = async (req, res) => {
                     },
                 },
             },
-            include: {
-                recipients: true,
-                fromUser: { select: { id: true, name: true, email: true } },
-            },
         });
 
-        // Create sender's email state
         await prisma.userEmail.create({
             data: {
                 emailId: email.id,
                 userId,
-                folder: 'sent',
+                folder: 'scheduled',
+                isScheduled: true,
+                scheduledFor: new Date(scheduledFor),
+                isSent: false,
                 isRead: true,
-                isSpam,
-                isPromotion,
-                isImportant: false,
-                importanceScore: 0,
             },
         });
 
-        // Create recipient's email state
-        if (recipientUser) {
-            await prisma.userEmail.create({
-                data: {
-                    emailId: email.id,
-                    userId: recipientUser.id,
-                    folder: 'inbox',
-                    isRead: false,
-                    isSpam,
-                    isPromotion,
-                    isImportant,
-                    importanceScore,
-                },
-            });
-        }
+        return res.status(201).json({
+            success: true,
+            message: 'Email scheduled successfully.',
+            data: email,
+        });
 
-        logger.info(`Email sent by ${userId} to ${to}`);
-        res.status(201).json({ success: true, data: email });
     } catch (error) {
-        logger.error('Send email error:', error.message);
-        res.status(500).json({ error: error.message });
+        logger.error('Schedule email error:', error.message);
+
+        res.status(500).json({
+            error: error.message,
+        });
     }
 };
 
@@ -260,6 +136,7 @@ export const getInbox = async (req, res) => {
         const inboxEmails = emails.map(email => ({
             ...email,
             isStarred: email.userEmails[0]?.isStarred ?? false,
+            isRead: email.userEmails[0]?.isRead ?? false,
         }));
 
         res.status(200).json({
@@ -307,6 +184,7 @@ export const getSentEmails = async (req, res) => {
         const sentEmails = emails.map(email => ({
             ...email,
             isStarred: email.userEmails[0]?.isStarred ?? false,
+            isRead: email.userEmails[0]?.isRead ?? false,
         }));
 
         res.status(200).json({ success: true, data: sentEmails });
@@ -345,6 +223,7 @@ export const getDrafts = async (req, res) => {
         const draftEmails = emails.map(email => ({
             ...email,
             isStarred: email.userEmails[0]?.isStarred ?? false,
+            isRead: email.userEmails[0]?.isRead ?? false,
         }));
 
         res.status(200).json({
@@ -395,6 +274,7 @@ export const getPromotionEmails = async (req, res) => {
         const promotionEmails = emails.map(email => ({
             ...email,
             isStarred: email.userEmails[0]?.isStarred ?? false,
+            isRead: email.userEmails[0]?.isRead ?? false,
         }));
 
         res.status(200).json({
@@ -448,6 +328,7 @@ export const getSpamEmails = async (req, res) => {
         const spamEmails = emails.map(email => ({
             ...email,
             isStarred: email.userEmails[0]?.isStarred ?? false,
+            isRead: email.userEmails[0]?.isRead ?? false,
         }));
 
         res.status(200).json({
@@ -536,6 +417,7 @@ export const getStarredEmails = async (req, res) => {
         const emails = starredEmails.map(item => ({
             ...item.email,
             isStarred: true,
+            isRead: item.isRead,
         }));
 
         res.status(200).json({
@@ -590,6 +472,7 @@ export const getImportantEmails = async (req, res) => {
         const importantEmails = emails.map(email => ({
             ...email,
             isStarred: email.userEmails[0]?.isStarred ?? false,
+            isRead: email.userEmails[0]?.isRead ?? false,
             isImportant: email.userEmails[0]?.isImportant ?? false,
             importanceScore: email.userEmails[0]?.importanceScore ?? 0,
         }));
@@ -648,19 +531,17 @@ export const getEmailById = async (req, res) => {
         }
 
         // Mark as read
-        if (email.fromUserId !== userId) {
-            await prisma.userEmail.update({
-                where: {
-                    emailId_userId: {
-                        emailId,
-                        userId,
-                    },
+        await prisma.userEmail.update({
+            where: {
+                emailId_userId: {
+                    emailId,
+                    userId,
                 },
-                data: {
-                    isRead: true,
-                },
-            });
-        }
+            },
+            data: {
+                isRead: true,
+            },
+        });
 
         res.status(200).json({ success: true, data: email });
     } catch (error) {
@@ -705,18 +586,6 @@ export const moveToTrash = async (req, res) => {
             },
         });
 
-        if (!userEmail) {
-            return res.status(404).json({
-                message: 'Email not found',
-            });
-        }
-
-        if (!email) {
-            return res.status(404).json({
-                message: 'Email not found',
-            });
-        }
-
         const userEmail = await prisma.userEmail.findUnique({
             where: {
                 emailId_userId: {
@@ -725,6 +594,12 @@ export const moveToTrash = async (req, res) => {
                 },
             },
         });
+
+        if (!email || !userEmail) {
+            return res.status(404).json({
+                message: 'Email not found',
+            });
+        }
 
         await prisma.userEmail.update({
             where: {
@@ -764,18 +639,6 @@ export const restoreEmail = async (req, res) => {
             },
         });
 
-        if (!userEmail) {
-            return res.status(404).json({
-                message: 'Email not found',
-            });
-        }
-
-        if (!email) {
-            return res.status(404).json({
-                message: 'Email not found',
-            });
-        }
-
         const userEmail = await prisma.userEmail.findUnique({
             where: {
                 emailId_userId: {
@@ -784,6 +647,12 @@ export const restoreEmail = async (req, res) => {
                 },
             },
         });
+
+        if (!email || !userEmail) {
+            return res.status(404).json({
+                message: 'Email not found',
+            });
+        }
 
         await prisma.userEmail.update({
             where: {
@@ -926,6 +795,7 @@ export const searchEmails = async (req, res) => {
             const emailWithFlags = {
                 ...email,
                 isStarred: userEmail.isStarred,
+                isRead: userEmail.isRead,
                 isImportant: userEmail.isImportant,
                 importanceScore: userEmail.importanceScore,
             };
@@ -1030,6 +900,7 @@ export const getTrashEmails = async (req, res) => {
         const trashEmails = emails.map(email => ({
             ...email,
             isStarred: email.userEmails[0]?.isStarred ?? false,
+            isRead: email.userEmails[0]?.isRead ?? false,
         }));
 
         res.status(200).json({

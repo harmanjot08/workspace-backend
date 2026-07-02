@@ -15,6 +15,7 @@ import taskRoutes from './routes/task.routes.js';
 import calendarRoutes from './routes/calendar.routes.js';
 import adminRoutes from './routes/admin.routes.js';
 import contactRoutes from './routes/contact.routes.js';
+import { startEmailScheduler } from './services/emailScheduler.js';
 dotenv.config();
 const app = express();
 app.use(helmet());
@@ -77,6 +78,7 @@ app.use(passport.session());
 const PORT = process.env.PORT || 5000;
 const httpServer = createServer(app);
 initializeSocket(httpServer);
+startEmailScheduler();
 httpServer.listen(PORT, () => {
     logger.info(`🚀 Server running on port ${PORT}`);
     logger.info(`📡 Socket.io enabled`);

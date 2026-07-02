@@ -381,6 +381,9 @@ model UserEmail {
   isStarred       Boolean  @default(false)
   isImportant     Boolean @default(false)
   importanceScore Int     @default(0)
+  isScheduled Boolean @default(false)
+  scheduledFor DateTime?
+  isSent Boolean @default(true)
   isSpam          Boolean  @default(false)
   isPromotion     Boolean  @default(false)
 
@@ -394,4 +397,5 @@ model UserEmail {
 
   @@index([emailId])
   @@index([userId])
+  @@index([isScheduled, isSent, scheduledFor])
 }

@@ -10,6 +10,9 @@ router.use(authenticate);
 // Send email
 router.post('/send', emailController.sendEmail);
 
+//schedule send
+router.post('/schedule', emailController.scheduleEmail);
+
 // Get inbox
 router.get('/inbox', emailController.getInbox);
 
