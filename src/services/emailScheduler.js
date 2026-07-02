@@ -5,7 +5,9 @@ import { logger } from '../utils/logger.js';
 export const startEmailScheduler = () => {
     setInterval(async () => {
         try {
+            logger.info('Checking scheduled emails...');
             const scheduledEmails = await prisma.userEmail.findMany({
+                logger.info(`Found ${scheduledEmails.length} scheduled emails`);
                 where: {
                     isScheduled: true,
                     isSent: false,
@@ -37,3 +39,5 @@ export const startEmailScheduler = () => {
         }
     }, 30000); // every 30 seconds
 };
+
+logger.info('Email Scheduler Started');
