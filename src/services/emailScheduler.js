@@ -1,13 +1,15 @@
 import prisma from '../config/database.config.js';
-import { deliverScheduledEmail } from './internalEmailService.js';
+import { deliverEmail } from './internalEmailService.js';
 import { logger } from '../utils/logger.js';
 
 export const startEmailScheduler = () => {
+    logger.info('Email Scheduler Started');
+
     setInterval(async () => {
         try {
             logger.info('Checking scheduled emails...');
+
             const scheduledEmails = await prisma.userEmail.findMany({
-                logger.info(`Found ${scheduledEmails.length} scheduled emails`);
                 where: {
                     isScheduled: true,
                     isSent: false,
@@ -24,20 +26,38 @@ export const startEmailScheduler = () => {
                 },
             });
 
+            logger.info(`Found ${scheduledEmails.length} scheduled emails`);
+
             for (const scheduled of scheduledEmails) {
-                const recipient = scheduled.email.recipients[0];
+                const recipient = scheduled.email.recipients?.[0];
 
                 if (!recipient) continue;
 
-                await deliverScheduledEmail({
-                    emailId: scheduled.emailId,
-                    senderUserId: scheduled.userId,
+                await deliverEmail({
+                    userId: scheduled.userId,
+                    to: recipient.recipientEmail,
+                    subject: scheduled.email.subject,
+                    body: scheduled.email.body,
                 });
+
+                await prisma.userEmail.update({
+                    where: {
+                        emailId_userId: {
+                            emailId: scheduled.emailId,
+                            userId: scheduled.userId,
+                        },
+                    },
+                    data: {
+                        isSent: true,
+                        isScheduled: false,
+                        folder: 'sent',
+                    },
+                });
+
+                logger.info(`Sent scheduled email: ${scheduled.emailId}`);
             }
         } catch (error) {
-            logger.error('Email Scheduler:', error.message);
+            logger.error('Email Scheduler Error:', error.message);
         }
-    }, 30000); // every 30 seconds
+    }, 30000);
 };
-
-logger.info('Email Scheduler Started');
