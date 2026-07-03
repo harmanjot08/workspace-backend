@@ -51,6 +51,10 @@ export const scheduleEmail = async (req, res) => {
             },
         });
 
+        logger.info(`Received scheduledFor: ${scheduledFor}`);
+        logger.info(`Parsed scheduledFor: ${new Date(scheduledFor).toISOString()}`);
+        logger.info(`Current server time: ${new Date().toISOString()}`);
+
         const email = await prisma.email.create({
             data: {
                 fromUserId: userId,
