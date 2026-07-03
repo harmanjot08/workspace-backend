@@ -27,6 +27,9 @@ export const startEmailScheduler = () => {
             });
 
             logger.info(`Found ${scheduledEmails.length} scheduled emails`);
+            console.log('Scheduled emails:', scheduledEmails);
+
+            logger.info(`Found ${scheduledEmails.length} scheduled emails`);
 
             for (const scheduled of scheduledEmails) {
                 const recipient = scheduled.email.recipients?.[0];
