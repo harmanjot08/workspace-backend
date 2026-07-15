@@ -17,6 +17,9 @@ import adminRoutes from './routes/admin.routes.js';
 import contactRoutes from './routes/contact.routes.js';
 import { startEmailScheduler } from './services/emailScheduler.js';
 dotenv.config();
+const dbUrl = process.env.DATABASE_URL || "";
+
+console.log("DB URL Host:", dbUrl.split("@")[1]);
 const app = express();
 app.use(helmet());
 app.use(cors({
